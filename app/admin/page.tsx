@@ -3,54 +3,51 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Users, Clock, AlertTriangle, CheckCircle, BarChart3, ArrowUpRight, ArrowDownRight, Eye } from "lucide-react"
+import { Users, Clock, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight, Eye } from "lucide-react"
 import Link from "next/link"
-// Importation de recharts pour le graphique
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from 'recharts'
 
 export default function AdminDashboard() {
   const recentPayments = [
     {
       id: "PAY-001",
       student: "Jean Dupont",
-      matricule: "SJP-2023-12345",
-      date: "20/04/2024",
+      school: "SJP",
+      matricule: "SJP-2023-12345", 
       amount: "200 000",
       status: "pending",
     },
     {
       id: "PAY-002",
       student: "Marie Curie",
+      school: "SJP",
       matricule: "SJP-2023-12346",
-      date: "19/04/2024",
-      amount: "300 000",
+      amount: "300 000", 
       status: "approved",
     },
     {
       id: "PAY-003",
       student: "Pierre Martin",
+      school: "SJMB",
       matricule: "SJMB-2023-12347",
-      date: "18/04/2024",
       amount: "150 000",
       status: "rejected",
     },
     {
-      id: "PAY-004",
+      id: "PAY-004", 
       student: "Sophie Dubois",
+      school: "SJP",
       matricule: "SJP-2023-12348",
-      date: "17/04/2024",
       amount: "250 000",
       status: "approved",
     },
     {
       id: "PAY-005",
-      student: "Lucas Bernard",
+      student: "Lucas Bernard", 
+      school: "SJMB",
       matricule: "SJMB-2023-12349",
-      date: "16/04/2024",
       amount: "200 000",
       status: "pending",
     },
@@ -129,9 +126,9 @@ export default function AdminDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Étudiant</TableHead>
-                  <TableHead className="hidden md:table-cell">Matricule</TableHead>
+                  <TableHead>École</TableHead>
+                  <TableHead>Matricule</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -140,9 +137,9 @@ export default function AdminDashboard() {
               <TableBody>
                 {recentPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.id}</TableCell>
                     <TableCell>{payment.student}</TableCell>
-                    <TableCell className="hidden md:table-cell">{payment.matricule}</TableCell>
+                    <TableCell>{payment.school}</TableCell>
+                    <TableCell>{payment.matricule}</TableCell>
                     <TableCell>{payment.amount} FCFA</TableCell>
                     <TableCell>
                       {payment.status === "approved" && (
@@ -220,133 +217,12 @@ export default function AdminDashboard() {
                       Gérer les étudiants
                     </Link>
                   </Button>
-                  <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                    <Link href="/admin/rapports">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Voir les rapports
-                    </Link>
-                  </Button>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <div className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Aperçu financier</CardTitle>
-            <CardDescription>Résumé des transactions financières</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="all">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
-                <TabsTrigger value="all">Tous</TabsTrigger>
-                <TabsTrigger value="sjp">SJP</TabsTrigger>
-                <TabsTrigger value="sjmb">SJMB</TabsTrigger>
-                <TabsTrigger value="monthly">Mensuel</TabsTrigger>
-              </TabsList>
-              <TabsContent value="all" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-blue-800 mb-2">Total collecté</h3>
-                    <p className="text-2xl font-bold text-blue-900">752,450,000 FCFA</p>
-                    <p className="text-xs text-blue-700 mt-1">Année académique 2023-2024</p>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-green-800 mb-2">Paiements approuvés</h3>
-                    <p className="text-2xl font-bold text-green-900">685,200,000 FCFA</p>
-                    <p className="text-xs text-green-700 mt-1">91% du total</p>
-                  </div>
-                  <div className="bg-yellow-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-yellow-800 mb-2">Paiements en attente</h3>
-                    <p className="text-2xl font-bold text-yellow-900">67,250,000 FCFA</p>
-                    <p className="text-xs text-yellow-700 mt-1">9% du total</p>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h3 className="text-sm font-medium mb-4">Tendance des paiements</h3>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={paymentTrendData}
-                        margin={{ top: 10, right: 10, left: 20, bottom: 20 }}
-                      >
-                        <defs>
-                          <linearGradient id="colorMontant" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis 
-                          dataKey="mois" 
-                          tick={{ fill: '#64748b', fontSize: 12 }}
-                          axisLine={{ stroke: '#e2e8f0' }}
-                        />
-                        <YAxis 
-                          tickFormatter={(value) => `${value/1000000}M`} 
-                          domain={[0, 'dataMax + 500000']}
-                          tick={{ fill: '#64748b', fontSize: 12 }}
-                          axisLine={{ stroke: '#e2e8f0' }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value.toLocaleString()} FCFA`, 'Montant']}
-                          labelFormatter={(label) => `Mois: ${label}`}
-                          contentStyle={{ 
-                            backgroundColor: 'white', 
-                            borderRadius: '6px', 
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', 
-                            border: 'none' 
-                          }}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="montant" 
-                          name="Montant des paiements" 
-                          stroke="#2563eb" 
-                          strokeWidth={3}
-                          fillOpacity={1}
-                          fill="url(#colorMontant)"
-                          activeDot={{ r: 8, stroke: '#2563eb', strokeWidth: 2, fill: 'white' }} 
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="sjp">
-                <div className="h-[300px] bg-muted/20 rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Données financières SJP</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="sjmb">
-                <div className="h-[300px] bg-muted/20 rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Données financières SJMB</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="monthly">
-                <div className="h-[300px] bg-muted/20 rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Données financières mensuelles</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
     </DashboardLayout>
   )
 }
-
-// Données pour le graphique de tendance des paiements
-const paymentTrendData = [
-  { mois: 'Jan', montant: 1200000 },
-  { mois: 'Fév', montant: 1900000 },
-  { mois: 'Mar', montant: 2800000 },
-  { mois: 'Avr', montant: 3100000 },
-  { mois: 'Mai', montant: 2500000 },
-  { mois: 'Juin', montant: 3800000 },
-];
-

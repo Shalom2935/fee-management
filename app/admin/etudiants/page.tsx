@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
-import { Edit, Eye, FileText, Search, Trash, Upload, UserPlus } from "lucide-react"
+import { Edit, Eye, FileText, Search, Trash, Upload, UserPlus, Download } from "lucide-react"
 
 export default function StudentManagement() {
   const students = [
@@ -28,8 +28,7 @@ export default function StudentManagement() {
       matricule: "SJP-2023-12345",
       school: "SJP",
       level: "Licence 3",
-      department: "Informatique",
-      status: "active",
+      filiere: "Génie Infotronique",
       paymentStatus: "up-to-date",
     },
     {
@@ -38,8 +37,7 @@ export default function StudentManagement() {
       matricule: "SJP-2023-12346",
       school: "SJP",
       level: "Master 1",
-      department: "Physique",
-      status: "active",
+      filiere: "Génie Civil",
       paymentStatus: "up-to-date",
     },
     {
@@ -48,8 +46,7 @@ export default function StudentManagement() {
       matricule: "SJMB-2023-12347",
       school: "SJMB",
       level: "Licence 2",
-      department: "Gestion",
-      status: "active",
+      filiere: "Comptabilité Contrôle Audit",
       paymentStatus: "late",
     },
     {
@@ -58,8 +55,7 @@ export default function StudentManagement() {
       matricule: "SJP-2023-12348",
       school: "SJP",
       level: "Licence 1",
-      department: "Droit",
-      status: "active",
+      filiere: "Génie Mécatronique",
       paymentStatus: "up-to-date",
     },
     {
@@ -68,8 +64,7 @@ export default function StudentManagement() {
       matricule: "SJMB-2023-12349",
       school: "SJMB",
       level: "Master 2",
-      department: "Finance",
-      status: "inactive",
+      filiere: "Banques et Institutions financières",
       paymentStatus: "late",
     },
     {
@@ -78,9 +73,8 @@ export default function StudentManagement() {
       matricule: "SJP-2023-12350",
       school: "SJP",
       level: "Licence 3",
-      department: "Communication",
-      status: "active",
-      paymentStatus: "partial",
+      filiere: "Génie Civil",
+      paymentStatus: "late", // Changed from "partial" to "late"
     },
   ]
 
@@ -89,17 +83,138 @@ export default function StudentManagement() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gestion des étudiants</CardTitle>
-            <CardDescription>Gérez les comptes étudiants et leurs informations</CardDescription>
+            <CardTitle>Liste des étudiants</CardTitle>
+            <CardDescription></CardDescription>
           </div>
-          {/* Removed the "Ajouter" button from here */}
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-1">
+                  <UserPlus className="h-4 w-4" />
+                  Ajouter un étudiant
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Ajouter un nouvel étudiant</DialogTitle>
+                  <DialogDescription>
+                    Remplissez les informations de l'étudiant ci-dessous.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                      Nom complet
+                    </Label>
+                    <Input id="name" className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="school" className="text-right">
+                      École
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Sélectionner une école" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sjp">SJP</SelectItem>
+                        <SelectItem value="sjmb">SJMB</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="level" className="text-right">
+                      Niveau
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Sélectionner un niveau" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="licence-1">Licence 1</SelectItem>
+                        <SelectItem value="licence-2">Licence 2</SelectItem>
+                        <SelectItem value="licence-3">Licence 3</SelectItem>
+                        <SelectItem value="master-1">Master 1</SelectItem>
+                        <SelectItem value="master-2">Master 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="filiere" className="text-right">
+                      Filière
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Sélectionner une filière" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="genie-civil">Génie Civil</SelectItem>
+                        <SelectItem value="genie-mecatronique">Génie Mécatronique</SelectItem>
+                        <SelectItem value="genie-infotronique">Génie Infotronique</SelectItem>
+                        <SelectItem value="banques-finances">Banques et Institutions financières</SelectItem>
+                        <SelectItem value="comptabilite">Comptabilité Contrôle Audit</SelectItem>
+                        <SelectItem value="supply-chain">Supply Chain</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Enregistrer</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-1">
+                  <Upload className="h-4 w-4" />
+                  Importer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Importer des étudiants</DialogTitle>
+                  <DialogDescription>
+                    Téléchargez un fichier CSV ou Excel contenant la liste des étudiants.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        Glissez-déposez votre fichier ici ou cliquez pour parcourir
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Formats acceptés: .csv, .xlsx (max 5MB)
+                      </p>
+                      <Input type="file" className="hidden" id="file-upload" />
+                      <Label htmlFor="file-upload" className="cursor-pointer">
+                        <Button variant="outline" size="sm" className="mt-2">
+                          Parcourir
+                        </Button>
+                      </Label>
+                    </div>
+                  </div>
+                  <div>
+                    <a href="#" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                      <Download className="h-3 w-3" />
+                      Télécharger le modèle de fichier
+                    </a>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Importer</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="mb-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="all">Tous</TabsTrigger>
-              <TabsTrigger value="active">Actifs</TabsTrigger>
-              <TabsTrigger value="inactive">Inactifs</TabsTrigger>
+              <TabsTrigger value="up-to-date">À jour</TabsTrigger>
               <TabsTrigger value="late">En retard</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -122,15 +237,16 @@ export default function StudentManagement() {
               </Select>
               <Select>
                 <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Département" />
+                  <SelectValue placeholder="Filière" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="informatique">Informatique</SelectItem>
-                  <SelectItem value="gestion">Gestion</SelectItem>
-                  <SelectItem value="droit">Droit</SelectItem>
-                  <SelectItem value="communication">Communication</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="genie-civil">Génie Civil</SelectItem>
+                  <SelectItem value="genie-mecatronique">Génie Mécatronique</SelectItem>
+                  <SelectItem value="genie-infotronique">Génie Infotronique</SelectItem>
+                  <SelectItem value="banques-finances">Banques et Institutions financières</SelectItem>
+                  <SelectItem value="comptabilite">Comptabilité Contrôle Audit</SelectItem>
+                  <SelectItem value="supply-chain">Supply Chain</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -144,8 +260,7 @@ export default function StudentManagement() {
                   <TableHead>Matricule</TableHead>
                   <TableHead className="hidden md:table-cell">École</TableHead>
                   <TableHead className="hidden md:table-cell">Niveau</TableHead>
-                  <TableHead className="hidden md:table-cell">Département</TableHead>
-                  <TableHead>Statut</TableHead>
+                  <TableHead className="hidden md:table-cell">Filière</TableHead>
                   <TableHead>Paiement</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -157,20 +272,10 @@ export default function StudentManagement() {
                     <TableCell>{student.matricule}</TableCell>
                     <TableCell className="hidden md:table-cell">{student.school}</TableCell>
                     <TableCell className="hidden md:table-cell">{student.level}</TableCell>
-                    <TableCell className="hidden md:table-cell">{student.department}</TableCell>
-                    <TableCell>
-                      {student.status === "active" ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Actif</Badge>
-                      ) : (
-                        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Inactif</Badge>
-                      )}
-                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{student.filiere}</TableCell>
                     <TableCell>
                       {student.paymentStatus === "up-to-date" && (
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">À jour</Badge>
-                      )}
-                      {student.paymentStatus === "partial" && (
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Partiel</Badge>
                       )}
                       {student.paymentStatus === "late" && (
                         <Badge className="bg-red-100 text-red-800 hover:bg-red-100">En retard</Badge>
@@ -216,4 +321,3 @@ export default function StudentManagement() {
     </DashboardLayout>
   )
 }
-

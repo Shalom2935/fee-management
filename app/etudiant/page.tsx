@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 export default function StudentDashboard() {
   return (
     <DashboardLayout userType="etudiant">
-      <div className="max-w-[90%]">
+      <div className="max-w-[90%] mx-auto w-full">
         {/* Personal Information Card */}
         <Card className="mb-6">
           <CardHeader className="border-b pb-4">
@@ -175,11 +175,11 @@ export default function StudentDashboard() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 justify-start mt-8">
-          <Button size="sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex gap-4 mt-8">
+          <Button className="w-full md:w-auto">
             <CreditCard className="mr-2 h-4 w-4" /> Soumettre un paiement
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" className="w-full md:w-auto">
             <User className="mr-2 h-4 w-4" /> Paramètres du compte
           </Button>
         </div>

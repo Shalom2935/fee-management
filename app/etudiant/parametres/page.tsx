@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export default function SettingsPage() {
   return (
     <DashboardLayout userType="etudiant">
-      <div className="max-w-[70%] space-y-6">
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 space-y-6">
         <Card className="border-none shadow-md">
           <CardHeader className="border-b pb-4">
             <div className="flex items-center gap-2">

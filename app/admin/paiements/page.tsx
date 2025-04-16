@@ -1,7 +1,7 @@
 "use client"
 
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -93,7 +93,7 @@ export default function PendingPayments() {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">128</div>
+            <div className="text-2xl font-bold">156</div>
             <p className="text-xs text-muted-foreground">Paiements approuvés ce mois-ci</p>
           </CardContent>
         </Card>
@@ -103,7 +103,7 @@ export default function PendingPayments() {
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7</div>
+            <div className="text-2xl font-bold">18</div>
             <p className="text-xs text-muted-foreground">Paiements rejetés ce mois-ci</p>
           </CardContent>
         </Card>
@@ -115,13 +115,6 @@ export default function PendingPayments() {
           <CardDescription>Vérifiez et approuvez les paiements soumis par les étudiants</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="pending" className="mb-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="pending">En attente</TabsTrigger>
-              <TabsTrigger value="approved">Approuvés</TabsTrigger>
-              <TabsTrigger value="rejected">Rejetés</TabsTrigger>
-            </TabsList>
-          </Tabs>
 
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-1">
@@ -134,7 +127,7 @@ export default function PendingPayments() {
                   <SelectValue placeholder="École" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="all">Toutes les écoles</SelectItem>
                   <SelectItem value="sjp">SJP</SelectItem>
                   <SelectItem value="sjmb">SJMB</SelectItem>
                 </SelectContent>
@@ -153,15 +146,15 @@ export default function PendingPayments() {
             </div>
           </div>
 
-          <div className="rounded-md border">
+          {/* Version desktop: tableau */}
+          <div className="rounded-md border hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Étudiant</TableHead>
+                  <TableHead className="hidden md:table-cell">École</TableHead>
                   <TableHead className="hidden md:table-cell">Matricule</TableHead>
                   <TableHead>Montant (FCFA)</TableHead>
-                  <TableHead className="hidden md:table-cell">Méthode</TableHead>
                   <TableHead className="hidden md:table-cell">Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -169,95 +162,73 @@ export default function PendingPayments() {
               <TableBody>
                 {pendingPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.id}</TableCell>
-                    <TableCell>{payment.student}</TableCell>
+                    <TableCell className="font-medium">{payment.student}</TableCell>
+                    <TableCell className="hidden md:table-cell">{payment.matricule.substring(0, 3)}</TableCell>
                     <TableCell className="hidden md:table-cell">{payment.matricule}</TableCell>
                     <TableCell>{payment.amount}</TableCell>
-                    <TableCell className="hidden md:table-cell">{payment.method}</TableCell>
                     <TableCell className="hidden md:table-cell">{payment.date}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" title="Voir les détails">
+                            <Button variant="ghost" size="icon" title="Voir les détails">
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-[625px]">
+                          <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Détails du paiement</DialogTitle>
                               <DialogDescription>
-                                Paiement #{payment.id} soumis par {payment.student}
+                                Informations complètes sur le paiement
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-muted-foreground">Étudiant</Label>
-                                  <p className="font-medium">{payment.student}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-muted-foreground">Matricule</Label>
-                                  <p className="font-medium">{payment.matricule}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-muted-foreground">Montant</Label>
-                                  <p className="font-medium">{payment.amount} FCFA</p>
-                                </div>
-                                <div>
-                                  <Label className="text-muted-foreground">Méthode</Label>
-                                  <p className="font-medium">{payment.method}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-muted-foreground">Date</Label>
-                                  <p className="font-medium">{payment.date}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-muted-foreground">N° Reçu</Label>
-                                  <p className="font-medium">{payment.receipt}</p>
-                                </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Étudiant</Label>
+                                <div className="col-span-3">{payment.student}</div>
                               </div>
-
-                              <div>
-                                <Label className="text-muted-foreground">Preuve de paiement</Label>
-                                <div className="mt-2 border rounded-md p-2 flex items-center justify-center h-[200px] bg-muted/20">
-                                  <p className="text-muted-foreground">Aperçu du reçu</p>
-                                </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">École</Label>
+                                <div className="col-span-3">{payment.matricule.substring(0, 3)}</div>
                               </div>
-
-                              <div>
-                                <Label htmlFor="notes">Notes (optionnel)</Label>
-                                <Textarea id="notes" placeholder="Ajouter des notes concernant ce paiement" />
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Matricule</Label>
+                                <div className="col-span-3">{payment.matricule}</div>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Montant</Label>
+                                <div className="col-span-3">{payment.amount} FCFA</div>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Date</Label>
+                                <div className="col-span-3">{payment.date}</div>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Méthode</Label>
+                                <div className="col-span-3">{payment.method}</div>
+                              </div>
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right font-medium">Référence</Label>
+                                <div className="col-span-3">{payment.receipt}</div>
                               </div>
                             </div>
-                            <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                              <Button variant="outline" className="sm:w-auto w-full">
-                                <Download className="mr-2 h-4 w-4" />
-                                Télécharger le reçu
-                              </Button>
-                              <Button variant="destructive" className="sm:w-auto w-full">
-                                <ThumbsDown className="mr-2 h-4 w-4" />
-                                Rejeter
-                              </Button>
-                              <Button className="sm:w-auto w-full bg-green-600 hover:bg-green-700">
+                            <div className="flex justify-center">
+                              <Button className="mx-2 bg-green-600 hover:bg-green-700">
                                 <ThumbsUp className="mr-2 h-4 w-4" />
                                 Approuver
                               </Button>
-                            </DialogFooter>
+                              <Button variant="outline" className="mx-2 text-red-600 border-red-600 hover:bg-red-50">
+                                <ThumbsDown className="mr-2 h-4 w-4" />
+                                Rejeter
+                              </Button>
+                            </div>
                           </DialogContent>
                         </Dialog>
-
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                          title="Rejeter"
-                        >
-                          <ThumbsDown className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="text-green-600" title="Approuver">
+                          <CheckCircle className="h-4 w-4" />
                         </Button>
-
-                        <Button size="icon" className="bg-green-600 hover:bg-green-700" title="Approuver">
-                          <ThumbsUp className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="text-red-600" title="Rejeter">
+                          <XCircle className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -265,6 +236,93 @@ export default function PendingPayments() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Version mobile: cards */}
+          <div className="grid gap-4 md:hidden">
+            {pendingPayments.map((payment) => (
+              <Card key={payment.id} className="overflow-hidden">
+                <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">{payment.student}</CardTitle>
+                    <CardDescription>{payment.matricule}</CardDescription>
+                  </div>
+                  <div className="font-bold text-right">{payment.amount} FCFA</div>
+                </CardHeader>
+                <CardContent className="p-4 pt-2 pb-0">
+                  <div className="text-sm text-muted-foreground flex justify-between">
+                    <span>École: {payment.matricule.substring(0, 3)}</span>
+                    <span>Date: {payment.date}</span>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-2 flex justify-end border-t mt-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8">
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        Détails
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Détails du paiement</DialogTitle>
+                        <DialogDescription>
+                          Informations complètes sur le paiement
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Étudiant</Label>
+                          <div className="col-span-3">{payment.student}</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">École</Label>
+                          <div className="col-span-3">{payment.matricule.substring(0, 3)}</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Matricule</Label>
+                          <div className="col-span-3">{payment.matricule}</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Montant</Label>
+                          <div className="col-span-3">{payment.amount} FCFA</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Date</Label>
+                          <div className="col-span-3">{payment.date}</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Méthode</Label>
+                          <div className="col-span-3">{payment.method}</div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right font-medium">Référence</Label>
+                          <div className="col-span-3">{payment.receipt}</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-center">
+                        <Button className="mx-2 bg-green-600 hover:bg-green-700">
+                          <ThumbsUp className="mr-2 h-4 w-4" />
+                          Approuver
+                        </Button>
+                        <Button variant="outline" className="mx-2 text-red-600 border-red-600 hover:bg-red-50">
+                          <ThumbsDown className="mr-2 h-4 w-4" />
+                          Rejeter
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button variant="ghost" size="sm" className="h-8 text-green-600">
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                    Approuver
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-red-600">
+                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                    Rejeter
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
 
           <div className="flex items-center justify-between mt-4">
@@ -283,4 +341,3 @@ export default function PendingPayments() {
     </DashboardLayout>
   )
 }
-
