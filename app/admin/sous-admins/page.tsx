@@ -2,7 +2,7 @@
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" // CardFooter needed for mobile view
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CardFooter } from "@/components/ui/card" // Import CardFooter
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Edit, Eye, Plus, Search, Trash, UserCog } from "lucide-react"
@@ -61,10 +62,12 @@ export default function SubAdminManagement() {
 
   return (
     <DashboardLayout userType="admin">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      {/* Add padding wrapper */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"> {/* Stack on mobile, row on sm+ */}
           <div>
-            <CardTitle>Gestion des sous-administrateurs</CardTitle>
+            <CardTitle className="text-xl md:text-2xl">Gestion des sous-administrateurs</CardTitle> {/* Responsive title */}
             <CardDescription>Gérez les comptes des sous-administrateurs du système</CardDescription>
           </div>
           <Dialog>
@@ -121,7 +124,7 @@ export default function SubAdminManagement() {
                   </Select>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="justify-start"> {/* Align button left */}
                 <Button type="submit">Créer le compte</Button>
               </DialogFooter>
             </DialogContent>
@@ -139,7 +142,7 @@ export default function SubAdminManagement() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input type="search" placeholder="Rechercher par nom ou email..." className="pl-8" />
             </div>
-            <div className="grid grid-cols-1 gap-4 md:flex md:w-auto">
+            <div className="grid grid-cols-1 gap-4 sm:flex sm:w-auto"> {/* Stack select on xs, flex row on sm+ */}
               <Select>
                 <SelectTrigger className="w-full md:w-[180px]">
                   <SelectValue placeholder="École" />
@@ -153,7 +156,8 @@ export default function SubAdminManagement() {
             </div>
           </div>
 
-          <div className="rounded-md border">
+          {/* Desktop Table */}
+          <div className="rounded-md border overflow-x-auto hidden md:block"> {/* Hide below md, add scroll */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -166,13 +170,13 @@ export default function SubAdminManagement() {
               </TableHeader>
               <TableBody>
                 {subAdmins.map((admin) => (
-                  <TableRow key={admin.id}>
+                  <TableRow key={admin.id} className="[&_td]:whitespace-nowrap"> {/* Prevent wrapping */}
                     <TableCell className="font-medium">{admin.name}</TableCell>
                     <TableCell>{admin.matricule}</TableCell>
                     <TableCell>{admin.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{admin.school}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="text-right flex justify-end gap-1"> {/* Use flex for actions */}
+                      {/* <div className="flex justify-end gap-2"> */}
                         <Button variant="ghost" size="icon" title="Voir les détails">
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -187,12 +191,41 @@ export default function SubAdminManagement() {
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
-                      </div>
+                      {/* </div> */}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile/Tablet Cards */}
+          <div className="grid gap-4 md:hidden"> {/* Show below md */}
+            {subAdmins.map((admin) => (
+              <Card key={admin.id} className="overflow-hidden">
+                <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base leading-tight">{admin.name}</CardTitle>
+                    <CardDescription>{admin.matricule}</CardDescription>
+                  </div>
+                  <Badge variant="outline">{admin.school}</Badge>
+                </CardHeader>
+                <CardContent className="px-4 pt-0 pb-2 text-sm text-muted-foreground">
+                  <p>{admin.email}</p>
+                </CardContent>
+                <CardFooter className="p-2 flex flex-col items-stretch gap-2 sm:flex-row sm:justify-end border-t"> {/* Stack buttons on xs, row on sm+ */}
+                  <Button variant="ghost" size="sm" className="h-8">
+                    <Eye className="h-4 w-4 mr-1" /> Détails
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8">
+                    <Edit className="h-4 w-4 mr-1" /> Modifier
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                    <Trash className="h-4 w-4 mr-1" /> Supprimer
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
 
           <div className="flex items-center justify-between mt-4">
@@ -208,6 +241,7 @@ export default function SubAdminManagement() {
           </div>
         </CardContent>
       </Card>
+      </div> {/* Close padding wrapper */}
     </DashboardLayout>
   )
 }

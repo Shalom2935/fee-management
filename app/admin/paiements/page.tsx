@@ -76,42 +76,46 @@ export default function PendingPayments() {
 
   return (
     <DashboardLayout userType="admin">
-      <div className="grid gap-4 mb-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paiements en attente</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">42</div>
-            <p className="text-xs text-muted-foreground">Paiements nécessitant une vérification</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paiements approuvés</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">Paiements approuvés ce mois-ci</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paiements rejetés</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">18</div>
-            <p className="text-xs text-muted-foreground">Paiements rejetés ce mois-ci</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Add a wrapper with horizontal padding */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        {/* Grid for summary cards */}
+        <div className="grid gap-4 mb-6 md:grid-cols-3"> {/* Added mb-6 for spacing below */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Paiements en attente</CardTitle>
+              <Clock className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">42</div>
+              <p className="text-xs text-muted-foreground">Paiements nécessitant une vérification</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Paiements approuvés</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">156</div>
+              <p className="text-xs text-muted-foreground">Paiements approuvés ce mois-ci</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Paiements rejetés</CardTitle>
+              <XCircle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">18</div>
+              <p className="text-xs text-muted-foreground">Paiements rejetés ce mois-ci</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
+        {/* Main Card - Now inside the padding div */}
+        <Card>
         <CardHeader>
-          <CardTitle>Paiements en attente d'approbation</CardTitle>
+          <CardTitle className="text-xl md:text-2xl">Paiements en attente d'approbation</CardTitle> {/* Responsive Title */}
           <CardDescription>Vérifiez et approuvez les paiements soumis par les étudiants</CardDescription>
         </CardHeader>
         <CardContent>
@@ -147,7 +151,7 @@ export default function PendingPayments() {
           </div>
 
           {/* Version desktop: tableau */}
-          <div className="rounded-md border hidden md:block">
+          <div className="rounded-md border hidden md:block overflow-x-auto"> {/* Added overflow-x-auto */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -242,16 +246,16 @@ export default function PendingPayments() {
           <div className="grid gap-4 md:hidden">
             {pendingPayments.map((payment) => (
               <Card key={payment.id} className="overflow-hidden">
-                <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+                <CardHeader className="p-5 pb-2 flex flex-row items-start justify-between"> {/* Increased padding, align items start */}
                   <div>
-                    <CardTitle className="text-base">{payment.student}</CardTitle>
+                    <CardTitle className="text-base leading-tight">{payment.student}</CardTitle> {/* Added leading-tight */}
                     <CardDescription>{payment.matricule}</CardDescription>
                   </div>
                   <div className="font-bold text-right">{payment.amount} FCFA</div>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 pb-0">
+                <CardContent className="px-5 pt-2 pb-0"> {/* Adjusted padding */}
                   <div className="text-sm text-muted-foreground flex justify-between">
-                    <span>École: {payment.matricule.substring(0, 3)}</span>
+                    <span className="truncate pr-2">École: {payment.matricule.substring(0, 3)}</span> {/* Added truncate */}
                     <span>Date: {payment.date}</span>
                   </div>
                 </CardContent>
@@ -313,7 +317,7 @@ export default function PendingPayments() {
                     </DialogContent>
                   </Dialog>
                   <Button variant="ghost" size="sm" className="h-8 text-green-600">
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                    <CheckCircle className="h-3.5 w-3.5 mr-1 flex-shrink-0" /> {/* Added flex-shrink-0 */}
                     Approuver
                   </Button>
                   <Button variant="ghost" size="sm" className="h-8 text-red-600">
@@ -338,6 +342,7 @@ export default function PendingPayments() {
           </div>
         </CardContent>
       </Card>
+      </div> {/* Close the outer padding wrapper */}
     </DashboardLayout>
   )
 }

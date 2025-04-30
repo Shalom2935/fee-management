@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 export default function StudentDashboard() {
   return (
     <DashboardLayout userType="etudiant">
-      <div className="max-w-[90%] mx-auto w-full">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"> {/* Adjusted padding and max-width */}
         {/* Personal Information Card */}
         <Card className="mb-6">
           <CardHeader className="border-b pb-4">
@@ -24,7 +24,7 @@ export default function StudentDashboard() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3"> {/* Adjusted grid for tablets */}
               <div className="flex flex-col gap-3 p-4 rounded-lg bg-secondary/10">
                 <div className="flex items-center gap-3">
                   <User className="h-4 w-4 text-primary" />
@@ -122,10 +122,10 @@ export default function StudentDashboard() {
           <Card className="bg-secondary/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base font-semibold">Reste à payer</CardTitle>
-              <Clock className="h-4 w-4 text-primary" />
+              <Clock className="h-4 w-4 text-yellow-500" /> {/* Changed icon color to yellow */}
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-muted-foreground">300 000 FCFA</div>
+              <div className="text-xl font-bold text-yellow-500">300 000 FCFA</div> {/* Changed text color to yellow */}
               <p className="text-sm text-muted-foreground mt-1">Montant restant à payer</p>
             </CardContent>
           </Card>
@@ -147,7 +147,7 @@ export default function StudentDashboard() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                className="h-4 w-4 text-yellow-500"
+                className="h-4 w-4 text-red-500" // Changed icon color to red
               >
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                 <line x1="12" y1="9" x2="12" y2="13" />
@@ -155,7 +155,7 @@ export default function StudentDashboard() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-yellow-500">100 000 FCFA</div>
+              <div className="text-xl font-bold text-red-500">100 000 FCFA</div> {/* Changed text color to red */}
               <p className="text-xs text-muted-foreground">Dettes accumulées à ce jour</p>
             </CardContent>
           </Card>
@@ -176,12 +176,16 @@ export default function StudentDashboard() {
 
         {/* Action Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:flex gap-4 mt-8">
-          <Button className="w-full md:w-auto">
-            <CreditCard className="mr-2 h-4 w-4" /> Soumettre un paiement
-          </Button>
-          <Button variant="outline" className="w-full md:w-auto">
-            <User className="mr-2 h-4 w-4" /> Paramètres du compte
-          </Button>
+          <Link href="/etudiant/paiements" passHref>
+            <Button className="w-full md:w-auto">
+              <CreditCard className="mr-2 h-4 w-4" /> Soumettre un paiement
+            </Button>
+          </Link>
+          <Link href="/etudiant/parametres" passHref>
+            <Button variant="outline" className="w-full md:w-auto">
+              <User className="mr-2 h-4 w-4" /> Paramètres du compte
+            </Button>
+          </Link>
         </div>
       </div>
     </DashboardLayout>

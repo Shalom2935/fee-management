@@ -61,29 +61,30 @@ export default function PaymentHistory() {
 
   return (
     <DashboardLayout userType="etudiant">
-      <div className="max-w-5xl mx-auto w-full">
-        <Card>
-          <CardHeader>
+      <div className="w-full px-3 sm:px-4 md:px-6"> {/* Adjusted container padding */}
+        <Card className="mx-auto">
+          <CardHeader className="space-y-2 px-4 sm:px-6"> {/* Increased header padding */}
             <CardTitle>Historique des paiements</CardTitle>
             <CardDescription>Consultez l'historique de vos paiements</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <CardContent className="px-4 sm:px-6"> {/* Increased content padding */}
+            {/* Search and Export Section */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="relative flex-1 min-w-0"> {/* Added min-w-0 to prevent overflow */}
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Rechercher un paiement..."
-                  className="pl-8"
+                  className="pl-9 h-10 w-full"
                 />
               </div>
-              <Button variant="outline" className="md:w-auto">
+              <Button variant="outline" className="h-10 w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
                 Exporter
               </Button>
             </div>
 
-            {/* Version desktop: tableau */}
+            {/* Desktop Table View */}
             <div className="rounded-md border hidden md:block">
               <Table>
                 <TableHeader>
@@ -144,34 +145,38 @@ export default function PaymentHistory() {
               </Table>
             </div>
 
-            {/* Version mobile: cards */}
-            <div className="grid gap-4 md:hidden px-0 w-full">
+            {/* Mobile Cards View */}
+            <div className="grid gap-4 md:hidden">
               {payments.map((payment) => (
-                <Card key={payment.id} className="overflow-hidden w-full mx-0">
-                  <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{payment.date}</CardTitle>
-                      <CardDescription>{payment.receipt}</CardDescription>
-                    </div>
-                    <div className="font-bold text-right">{payment.amount} FCFA</div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2 pb-0">
-                    <div className="mt-2">
+                <Card key={payment.id} className="overflow-hidden w-full">
+                  <CardHeader className="p-4 sm:p-5 pb-3 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="space-y-1.5">
+                        <CardTitle className="text-lg font-semibold">
+                          {payment.amount} FCFA
+                        </CardTitle>
+                        <CardDescription className="text-sm">
+                          {payment.date}
+                        </CardDescription>
+                        <p className="text-sm text-muted-foreground">
+                          Reçu: {payment.receipt}
+                        </p>
+                      </div>
                       {payment.status === "approved" ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <CheckCircle className="mr-1 h-3 w-3" />
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
+                          <CheckCircle className="mr-1 h-3.5 w-3.5" />
                           Approuvé
                         </Badge>
                       ) : payment.status === "rejected" ? (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 cursor-pointer">
-                              <XCircle className="mr-1 h-3 w-3" />
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 cursor-pointer w-fit">
+                              <XCircle className="mr-1 h-3.5 w-3.5" />
                               Rejeté
                             </Badge>
                           </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
+                          <DialogContent className="max-w-[90vw] sm:max-w-lg mx-3">
+                            <DialogHeader className="space-y-3">
                               <DialogTitle>Paiement rejeté</DialogTitle>
                               <DialogDescription>
                                 Votre paiement a été rejeté pour la raison suivante:
@@ -183,19 +188,19 @@ export default function PaymentHistory() {
                           </DialogContent>
                         </Dialog>
                       ) : (
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                        <Badge className="bg-yellow-100 text-yellow-800 w-fit">
                           En attente
                         </Badge>
                       )}
                     </div>
-                  </CardContent>
-                  <CardFooter className="p-2 flex justify-end border-t mt-2">
-                    <Button variant="ghost" size="sm" className="h-8">
-                      <Eye className="h-3.5 w-3.5 mr-1" />
+                  </CardHeader>
+                  <CardFooter className="px-4 sm:px-5 py-3 flex flex-wrap gap-2 border-t bg-muted/5">
+                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none">
+                      <Eye className="h-4 w-4 mr-2" />
                       Détails
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8">
-                      <Download className="h-3.5 w-3.5 mr-1" />
+                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none">
+                      <Download className="h-4 w-4 mr-2" />
                       Reçu
                     </Button>
                   </CardFooter>

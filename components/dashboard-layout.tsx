@@ -47,13 +47,13 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // const [mobileMenuOpen, setMobileMenuOpen] = useState(false) // State not needed for Sheet
   // Remove the open state since sidebar will be permanent
   // const [open, setOpen] = useState(true)
 
   const studentMenuItems = [
     {
-      title: "Mon Compte",
+      title: "Tableau de bord",
       icon: Home,
       href: "/etudiant",
     },
@@ -149,23 +149,24 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const menuItems =
     userType === "etudiant" ? studentMenuItems : userType === "admin" ? adminMenuItems : sousAdminMenuItems
 
-  const userTitle =
-    userType === "etudiant"
-      ? "Compte Étudiant"
-      : userType === "admin"
-        ? "Compte Administrateur"
-        : "Compte Sous-Administrateur"
+  // These user details might be better fetched from context/auth state later
+  // const userTitle =
+  //   userType === "etudiant"
+  //     ? "Compte Étudiant"
+  //     : userType === "admin"
+  //       ? "Compte Administrateur"
+  //       : "Compte Sous-Administrateur"
 
-  const userName = userType === "etudiant" ? "Jean Dupont" : userType === "admin" ? "Admin Principal" : "Sous-Admin"
+  // const userName = userType === "etudiant" ? "Jean Dupont" : userType === "admin" ? "Admin Principal" : "Sous-Admin"
 
-  const userInfo =
-    userType === "etudiant" ? "Matricule: 12345" : userType === "admin" ? "Administrateur" : "Sous-Administrateur"
+  // const userInfo =
+  //   userType === "etudiant" ? "Matricule: 12345" : userType === "admin" ? "Administrateur" : "Sous-Administrateur"
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-gray-50">
         {/* Desktop sidebar - hidden on mobile */}
-        <Sidebar variant="sidebar" className="hidden md:flex">
+        <Sidebar userType={userType} variant="sidebar" className="hidden md:flex">
           <SidebarHeader className="flex h-14 items-end justify-center border-b">
             {/* Remove the sidebar trigger since it's now permanent */}
             <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center mb-2">
@@ -208,8 +209,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         <SidebarInset className="p-4 md:p-6 w-full">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-blue-900">
-                {pathname === `/${userType}` && userType === "etudiant" ? "Mon Compte" : pathname === `/${userType}` && "Tableau de bord"}
+              <h1 className="text-xl md:text-2xl font-bold text-blue-900"> {/* Responsive font size */}
+                {pathname === `/${userType}` && userType === "etudiant" ? "Tableau de bord" : pathname === `/${userType}` && "Tableau de bord"}
                 {pathname === `/${userType}/paiements` && "Paiements"}
                 {pathname === `/${userType}/historique` && "Historique des paiements"}
                 {pathname === `/${userType}/parametres` && "Paramètres"}
@@ -227,7 +228,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 {pathname === `/${userType}/sous-admins` && "Gérez les comptes des sous-administrateurs"}
               </p>
             </div>
-            
+
             {/* Mobile menu button - visible only on mobile */}
             <Sheet>
               <SheetTrigger asChild>
@@ -256,8 +257,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 </SheetHeader>
                 <div className="py-4">
                   {menuItems.map((item) => (
-                    <Link 
-                      key={item.href} 
+                    <Link
+                      key={item.href}
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-100 ${
                         pathname === item.href ? "bg-blue-50 text-blue-700 font-medium" : ""

@@ -140,6 +140,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+      userType?: "etudiant" | "admin" | "sous-admin"; // Add userType prop
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
@@ -642,4 +643,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-

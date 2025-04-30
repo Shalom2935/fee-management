@@ -83,10 +83,10 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout userType="admin">
-      <div className="space-y-6 max-w-4xl mx-auto">
-       
-        <Separator />
-        
+      {/* Added padding wrapper */}
+      <div className="px-4 sm:px-6 lg:px-8 space-y-6 max-w-4xl mx-auto"> {/* Widened max-width slightly */}
+        {/* Removed top Separator, spacing handled by space-y-6 */}
+
         {/* Profil */}
         <Card>
           <CardHeader>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input id="phone" defaultValue="+225 07 XX XX XX XX" />
+              <Input id="phone" defaultValue="+237 XXX XX XX XX" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="title">Titre</Label>
@@ -142,7 +142,7 @@ export default function SettingsPage() {
               <Input id="confirm-password" type="password" />
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
               <div className="space-y-0.5">
                 <Label htmlFor="session-timeout">Déconnexion automatique</Label>
                 <p className="text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <Select defaultValue="30">
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] flex-shrink-0"> {/* Fixed width, prevent shrinking */}
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,21 +179,21 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
               <div className="flex items-center space-x-2">
                 <Bell className="h-4 w-4" />
                 <Label htmlFor="notify-payments">Nouveaux paiements</Label>
               </div>
               <Switch id="notify-payments" defaultChecked />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
               <div className="flex items-center space-x-2">
                 <Shield className="h-4 w-4" />
                 <Label htmlFor="notify-security">Alertes de sécurité</Label>
               </div>
               <Switch id="notify-security" defaultChecked />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <Label htmlFor="notify-deadlines">Échéances de paiement</Label>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
               </Select>
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
               <div className="space-y-0.5">
                 <Label htmlFor="auto-reminders">Rappels automatiques</Label>
                 <p className="text-sm text-muted-foreground">
@@ -270,10 +270,10 @@ export default function SettingsPage() {
               Gérez les échéances de paiement pour l'année académique en cours
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-md border">
-              <table className="w-full">
-                <thead>
+          <CardContent className="space-y-4 ">
+            <div className="rounded-md border"> {/* Removed min-w-0 */}
+              <table className=""> {/* Removed table-fixed */}
+                <thead className="[&_tr]:border-b">
                   <tr className="border-b">
                     <th className="p-2 text-left font-medium">Description</th>
                     <th className="p-2 text-left font-medium">Date limite</th>
@@ -281,11 +281,11 @@ export default function SettingsPage() {
                     <th className="p-2 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&_tr:last-child]:border-0">
                   <tr className="border-b">
-                    <td className="p-2">Premier versement</td>
+                    <td className="p-2 whitespace-nowrap">Premier versement</td> {/* Prevent wrap */}
                     <td className="p-2">15/10/2024</td>
-                    <td className="p-2">150 000 FCFA</td>
+                    <td className="p-2 whitespace-nowrap">150 000 FCFA</td> {/* Prevent wrap */}
                     <td className="p-2 text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" title="Modifier">
@@ -298,9 +298,9 @@ export default function SettingsPage() {
                     </td>
                   </tr>
                   <tr className="border-b">
-                    <td className="p-2">Deuxième versement</td>
+                    <td className="p-2 whitespace-nowrap">Deuxième versement</td> {/* Prevent wrap */}
                     <td className="p-2">15/01/2025</td>
-                    <td className="p-2">100 000 FCFA</td>
+                    <td className="p-2 whitespace-nowrap">100 000 FCFA</td> {/* Prevent wrap */}
                     <td className="p-2 text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" title="Modifier">
@@ -313,9 +313,9 @@ export default function SettingsPage() {
                     </td>
                   </tr>
                   <tr>
-                    <td className="p-2">Troisième versement</td>
+                    <td className="p-2 whitespace-nowrap">Troisième versement</td> {/* Prevent wrap */}
                     <td className="p-2">15/04/2025</td>
-                    <td className="p-2">100 000 FCFA</td>
+                    <td className="p-2 whitespace-nowrap">100 000 FCFA</td> {/* Prevent wrap */}
                     <td className="p-2 text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" title="Modifier">

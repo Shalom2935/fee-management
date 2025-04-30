@@ -81,7 +81,7 @@ export default function SousAdminSettingsPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input id="phone" defaultValue="+225 07 XX XX XX XX" />
+              <Input id="phone" defaultValue="+237 XXX XX XX XX" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="title">Titre</Label>

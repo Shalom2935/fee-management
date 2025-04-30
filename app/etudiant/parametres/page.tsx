@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export default function SettingsPage() {
   return (
     <DashboardLayout userType="etudiant">
-      <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 space-y-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 mx-auto max-w-5xl"> {/* Adjusted padding, max-width, and spacing */}
         <Card className="border-none shadow-md">
           <CardHeader className="border-b pb-4">
             <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between"> {/* Responsive flex layout */}
                 <div className="space-y-0.5">
                   <Label className="text-base">Notifications par email</Label>
                   <p className="text-sm text-muted-foreground">
@@ -73,7 +73,7 @@ export default function SettingsPage() {
                 <Switch defaultChecked />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between"> {/* Responsive flex layout */}
                 <div className="space-y-0.5">
                   <Label className="text-base">Rappels de paiement</Label>
                   <p className="text-sm text-muted-foreground">
@@ -83,7 +83,7 @@ export default function SettingsPage() {
                 <Switch defaultChecked />
               </div>
               <Separator />
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between"> {/* Responsive flex layout */}
                 <div className="space-y-0.5">
                   <Label className="text-base">Notifications de validation</Label>
                   <p className="text-sm text-muted-foreground">

@@ -123,44 +123,71 @@ export default function AdminDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Étudiant</TableHead>
-                  <TableHead>École</TableHead>
-                  <TableHead>Matricule</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{payment.student}</TableCell>
-                    <TableCell>{payment.school}</TableCell>
-                    <TableCell>{payment.matricule}</TableCell>
-                    <TableCell>{payment.amount} FCFA</TableCell>
-                    <TableCell>
-                      {payment.status === "approved" && (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approuvé</Badge>
-                      )}
-                      {payment.status === "pending" && (
-                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>
-                      )}
-                      {payment.status === "rejected" && (
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {/* Table for Desktop (hidden below md breakpoint) */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Étudiant</TableHead>
+                    <TableHead>École</TableHead>
+                    <TableHead>Matricule</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{payment.student}</TableCell>
+                      <TableCell>{payment.school}</TableCell>
+                      <TableCell>{payment.matricule}</TableCell>
+                      <TableCell>{payment.amount} FCFA</TableCell>
+                      <TableCell>
+                        {payment.status === "approved" && (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approuvé</Badge>
+                        )}
+                        {payment.status === "pending" && (
+                          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>
+                        )}
+                        {payment.status === "rejected" && (
+                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Cards for Mobile/Tablet (visible below md breakpoint) */}
+            <div className="space-y-4 md:hidden">
+                {recentPayments.map((payment) => (
+                  <Card key={payment.id} className="bg-muted/30">
+                    <CardContent className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <div className="flex-1 space-y-1">
+                        <p className="font-medium">{payment.student}</p>
+                        <p className="text-sm text-muted-foreground">{payment.school} - {payment.matricule}</p>
+                        <p className="text-sm font-semibold">{payment.amount} FCFA</p>
+                      </div>
+                      <div className="flex flex-col sm:items-end gap-2">
+                        <div>
+                          {payment.status === "approved" && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approuvé</Badge>}
+                          {payment.status === "pending" && <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>}
+                          {payment.status === "rejected" && <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>}
+                        </div>
+                        {/* Optional: Keep the view button if needed */}
+                        {/* <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button> */}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+            </div>
           </CardContent>
         </Card>
 
