@@ -221,7 +221,7 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col">
           <div className="text-sm text-muted-foreground mt-4 text-center">
             <p className="mb-2 font-medium">Identifiants de démonstration:</p>
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
               <div className="rounded bg-muted p-2">
                 <p className="font-semibold">Étudiant</p>
                 <p>Matricule: UN21P039SJ</p>

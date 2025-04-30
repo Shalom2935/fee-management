@@ -38,7 +38,7 @@ export default function SousAdminPaymentHistory() {
     amount: number;
     date: string;
     status: 'approved' | 'rejected';
-    rejectionReason?: string;
+    note?: string;
   }
 
   const allPaymentHistory: Payment[] = [
@@ -65,7 +65,7 @@ export default function SousAdminPaymentHistory() {
       amount: 200000,
       date: "12/04/2025",
       status: "rejected",
-      rejectionReason: "Montant incorrect."
+      note: "Montant incorrect."
     },
     {
       id: "PAY-004",
@@ -90,7 +90,7 @@ export default function SousAdminPaymentHistory() {
       amount: 100000,
       date: "05/04/2025",
       status: "rejected",
-      rejectionReason: "Image floue",
+      note: "Image floue",
     },
     {
       id: "PAY-007",
@@ -208,14 +208,6 @@ export default function SousAdminPaymentHistory() {
                               <div className="col-span-3">{payment.date}</div>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
-                              <Label className="text-right font-medium">Méthode</Label>
-                              <div className="col-span-3">{payment.method}</div>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label className="text-right font-medium">Référence</Label>
-                              <div className="col-span-3">{payment.receipt}</div>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
                               <Label className="text-right font-medium">Statut</Label>
                               <div className="col-span-3">
                                 {payment.status === "approved" ? (
@@ -229,10 +221,10 @@ export default function SousAdminPaymentHistory() {
                                 )}
                               </div>
                             </div>
-                            {payment.status === "rejected" && payment.notes && (
+                            {payment.status === "rejected" && payment.note && (
                               <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right font-medium">Motif du rejet</Label>
-                                <div className="col-span-3">{payment.notes}</div>
+                                <div className="col-span-3">{payment.note}</div>
                               </div>
                             )}
                           </div>
@@ -316,14 +308,6 @@ export default function SousAdminPaymentHistory() {
                           <div className="col-span-3">{payment.date}</div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Méthode</Label>
-                          <div className="col-span-3">{payment.method}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Référence</Label>
-                          <div className="col-span-3">{payment.receipt}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label className="text-right font-medium">Statut</Label>
                           <div className="col-span-3">
                             {payment.status === "approved" ? (
@@ -337,10 +321,10 @@ export default function SousAdminPaymentHistory() {
                             )}
                           </div>
                         </div>
-                        {payment.status === "rejected" && payment.notes && (
+                        {payment.status === "rejected" && payment.note && (
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right font-medium">Motif du rejet</Label>
-                            <div className="col-span-3">{payment.notes}</div>
+                            <div className="col-span-3">{payment.note}</div>
                           </div>
                         )}
                       </div>
