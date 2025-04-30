@@ -218,28 +218,6 @@ export default function LoginPage() {
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <div className="text-sm text-muted-foreground mt-4 text-center">
-            <p className="mb-2 font-medium">Identifiants de démonstration:</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-              <div className="rounded bg-muted p-2">
-                <p className="font-semibold">Étudiant</p>
-                <p>Matricule: UN21P039SJ</p>
-                <p>Mot de passe: Etudiant123</p>
-              </div>
-              <div className="rounded bg-muted p-2">
-                <p className="font-semibold">Administrateur</p>
-                <p>Email: admin@univ-catho-sjd.com</p>
-                <p>Mot de passe: Admin123</p>
-              </div>
-              <div className="rounded bg-muted p-2">
-                <p className="font-semibold">Sous-Admin</p>
-                <p>Email: sousadmin@univ-catho-sjd.com</p>
-                <p>Mot de passe: SousAdmin123</p>
-              </div>
-            </div>
-          </div>
-        </CardFooter>
       </Card>
     </div>
   )
