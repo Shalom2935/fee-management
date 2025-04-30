@@ -61,13 +61,14 @@ export default function PaymentHistory() {
 
   return (
     <DashboardLayout userType="etudiant">
-      <div className="w-full px-3 sm:px-4 md:px-6"> {/* Adjusted container padding */}
-        <Card className="mx-auto">
-          <CardHeader className="space-y-2 px-4 sm:px-6"> {/* Increased header padding */}
+      {/* Standardized padding wrapper */}
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <Card> {/* Removed mx-auto to fill padded width */}
+          <CardHeader className="space-y-2"> {/* Removed internal padding */}
             <CardTitle>Historique des paiements</CardTitle>
             <CardDescription>Consultez l'historique de vos paiements</CardDescription>
           </CardHeader>
-          <CardContent className="px-4 sm:px-6"> {/* Increased content padding */}
+          <CardContent> {/* Removed internal padding */}
             {/* Search and Export Section */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1 min-w-0"> {/* Added min-w-0 to prevent overflow */}
@@ -149,7 +150,7 @@ export default function PaymentHistory() {
             <div className="grid gap-4 md:hidden">
               {payments.map((payment) => (
                 <Card key={payment.id} className="overflow-hidden w-full">
-                  <CardHeader className="p-4 sm:p-5 pb-3 space-y-3">
+                  <CardHeader className="p-4 pb-3"> {/* Simplified padding */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1.5">
                         <CardTitle className="text-lg font-semibold">
@@ -194,7 +195,7 @@ export default function PaymentHistory() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardFooter className="px-4 sm:px-5 py-3 flex flex-wrap gap-2 border-t bg-muted/5">
+                  <CardFooter className="px-4 py-3 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap border-t bg-muted/5"> {/* Stack buttons on xs */}
                     <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none">
                       <Eye className="h-4 w-4 mr-2" />
                       Détails
