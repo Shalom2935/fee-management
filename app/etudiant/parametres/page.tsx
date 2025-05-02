@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function SettingsPage() {
   return (
-    <DashboardLayout userType="etudiant">
+    <DashboardLayout>
       <div className="w-full px-4 sm:px-6 lg:px-8 space-y-6 mx-auto max-w-5xl"> {/* Adjusted padding, max-width, and spacing */}
         <Card className="border-none shadow-md">
           <CardHeader className="border-b pb-4">

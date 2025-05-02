@@ -9,8 +9,8 @@ export default function LogoutPage() {
   useEffect(() => {
     // Perform logout actions here
     // For example, clear localStorage tokens
-    localStorage.removeItem("authToken");
-    
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
     // Redirect to login page
     router.push("/");
   }, [router]);

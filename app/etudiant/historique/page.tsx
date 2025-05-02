@@ -60,7 +60,7 @@ export default function PaymentHistory() {
   ]
 
   return (
-    <DashboardLayout userType="etudiant">
+    <DashboardLayout>
       {/* Standardized padding wrapper */}
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <Card> {/* Removed mx-auto to fill padded width */}

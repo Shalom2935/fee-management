@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 
 export default function StudentDashboard() {
   return (
-    <DashboardLayout userType="etudiant">
+    <DashboardLayout>
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"> {/* Adjusted padding and max-width */}
         {/* Personal Information Card */}
         <Card className="mb-6">
