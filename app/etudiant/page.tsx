@@ -1,79 +1,209 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { CreditCard, Download, ArrowUpRight, Clock, CheckCircle, User, Mail, Phone, School } from "lucide-react"
-import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { CreditCard, Download, ArrowUpRight, Clock, CheckCircle, User, Mail, Phone, School, AlertTriangle } from "lucide-react"
+import { useAuth } from "@/components/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils"
+import { studentSchema, StudentData } from "@/lib/schemas/student"
+import { InfoRow } from "@/components/student/InfoRow"
 
 export default function StudentDashboard() {
+  const [userData, setUserData] = useState<StudentData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { token } = useAuth()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    if (!token) {
+      setError("Authentification requise. Veuillez vous reconnecter.")
+      setIsLoading(false)
+      return
+    }
+
+    const fetchUserData = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/me`
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        let data = null
+        if (
+          response.headers.get("content-length") !== "0" &&
+          response.headers.get("content-type")?.includes("application/json")
+        ) {
+          data = await response.json()
+          console.log("Response data:", data)
+        }
+
+        if (!response.ok) {
+          const errorMessage = data?.message || `Erreur ${response.status}: Impossible de récupérer les données.`
+          throw new Error(errorMessage)
+        }
+
+        // Zod validation here
+        const result = studentSchema.safeParse(data)
+        if (!result.success) {
+          console.error("Validation error:", result.error)
+          throw new Error("Réponse invalide reçue du serveur.")
+        }
+
+        setUserData(result.data)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Une erreur inconnue est survenue."
+        setError(message)
+        toast({
+          variant: "destructive",
+          title: "Erreur de chargement",
+          description: message,
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [token, toast])
+
+  // Calcul du pourcentage de progression
+  const total = 900000
+  const paid = userData?.paid ?? 0
+  const progress = total > 0 ? Math.round((paid / total) * 100) : 0
+  const debt = userData?.debt ?? 0
+  const rest = total - paid
+  const totalToPay = debt + rest
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="w-[90vw] md:w-[60vw] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <Card className="w-full">
+            <CardHeader className="w-full">
+              <Skeleton className="h-6 w-full" />
+            </CardHeader>
+            <CardContent className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 w-full">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+          <div className="grid gap-6 md:grid-cols-3 w-full">
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-28 w-full" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 w-full">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="w-full mx-auto md:px-6 lg:px-8 py-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>Impossible de charger les données du serveur</AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!userData) {
+    return (
+      <DashboardLayout>
+        <div className="w-full mx-auto md:px-6 lg:px-8 py-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>Impossible d'afficher les données du tableau de bord.</AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"> {/* Adjusted padding and max-width */}
+      <div className="w-[90vw] md:w-full max-w-7xl mx-auto md:px-6 lg:px-8 py-6">
         {/* Personal Information Card */}
         <Card className="mb-6">
           <CardHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Informations Personnelles</CardTitle>
+                <CardTitle className="text-lg font-semibold">Informations Personnelles</CardTitle>
                 <CardDescription>Vos informations d'étudiant</CardDescription>
               </div>
               <User className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3"> {/* Adjusted grid for tablets */}
-              <div className="flex flex-col gap-3 p-4 rounded-lg bg-secondary/10">
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Nom complet</p>
-                    <p className="text-sm text-muted-foreground">Jean Dupont</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Email</p>
-                    <p className="text-sm text-muted-foreground">jean.dupont@example.com</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 p-4 rounded-lg bg-secondary/10">
-                <div className="flex items-center gap-3">
-                  <School className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">École</p>
-                    <p className="text-sm text-muted-foreground">SJP</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <School className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Niveau et Filière</p>
-                    <p className="text-sm text-muted-foreground">GME 4 RIA</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 p-4 rounded-lg bg-secondary/10">
-                <div className="flex items-center gap-3">
-                  <School className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Matricule</p>
-                    <p className="text-sm text-muted-foreground">12345</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Téléphone</p>
-                    <p className="text-sm text-muted-foreground">+123 456 789</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-3 gap-2">
+            <InfoRow
+              icon={<User className="h-4 w-4 text-primary" />}
+              label="Nom complet"
+              value={
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-sm text-muted-foreground truncate uppercase md:w-[70%] block">{userData.full_name}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>{userData.full_name}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              }
+            />
+            <InfoRow
+              icon={<Mail className="h-4 w-4 text-primary" />}
+              label="Email"
+              value={userData.email}
+            />
+            <InfoRow
+              icon={<School className="h-4 w-4 text-primary" />}
+              label="École"
+              value={userData.school}
+            />
+            <InfoRow
+              icon={<School className="h-4 w-4 text-primary" />}
+              label="Niveau et Filière"
+              value={`${userData.field}  ${userData.current_year}${userData.field_option ? ` ${userData.field_option}` : ""}`}
+            />
+            <InfoRow
+              icon={<School className="h-4 w-4 text-primary" />}
+              label="Matricule"
+              value={userData.matricule}
+            />
+            <InfoRow
+              icon={<Phone className="h-4 w-4 text-primary" />}
+              label="Téléphone"
+              value={userData.phone || "Non spécifié"}
+            />
           </CardContent>
         </Card>
 
@@ -82,7 +212,7 @@ export default function StudentDashboard() {
           <CardHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Progression des Paiements</CardTitle>
+                <CardTitle className="font-semibold text-lg">Progression des Paiements</CardTitle>
                 <CardDescription>État actuel de vos paiements</CardDescription>
               </div>
               <ArrowUpRight className="h-5 w-5 text-primary" />
@@ -90,48 +220,48 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="flex items-end gap-4 mb-4">
-              <div className="text-2xl font-bold text-primary">67%</div>
+              <div className="text-2xl font-bold text-primary">{progress}%</div>
               <p className="text-sm text-muted-foreground pb-1">Progression des paiements pour l'année académique</p>
             </div>
-            <Progress value={67} className="h-2 rounded-full" />
+            <Progress value={progress} className="h-2 rounded-full" />
           </CardContent>
         </Card>
 
         {/* Payment Information Cards */}
-        <div className="grid gap-6 md:grid-cols-3 mb-4">
-          <Card className="bg-secondary/5">
+        <div className="flex flex-col md:flex-row md:flex-wrap justify-between gap-4 mb-4">
+          <Card className="flex-1 bg-secondary/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">Total année en cours</CardTitle>
+              <CardTitle className="text-base font-medium">Total année en cours</CardTitle>
               <School className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-primary">900 000 FCFA</div>
+              <div className="text-xl font-bold text-primary">{formatCurrency(total)}</div>
               <p className="text-sm text-muted-foreground mt-1">Montant total pour l'année académique</p>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 dark:bg-green-950/20">
+          <Card className="flex-1 bg-green-50 dark:bg-green-950/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">Montant payé</CardTitle>
+              <CardTitle className="text-base font-medium">Montant payé</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-green-500">600 000 FCFA</div>
+              <div className="text-xl font-bold text-green-500">{formatCurrency(userData.paid)}</div>
               <p className="text-sm text-muted-foreground mt-1">Montant total payé à ce jour</p>
             </CardContent>
           </Card>
-          <Card className="bg-secondary/5">
+          <Card className="flex-1 bg-secondary/5">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">Reste à payer</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" /> {/* Changed icon color to yellow */}
+              <CardTitle className="text-base font-medium">Reste à payer</CardTitle>
+              <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-yellow-500">300 000 FCFA</div> {/* Changed text color to yellow */}
+              <div className="text-xl font-semibold text-yellow-500">{formatCurrency(rest)}</div>
               <p className="text-sm text-muted-foreground mt-1">Montant restant à payer</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Dette Card */}
+        {/* Debt and Total Due Cards */}
         <div className="grid gap-4 md:grid-cols-2 mb-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -147,7 +277,7 @@ export default function StudentDashboard() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                className="h-4 w-4 text-red-500" // Changed icon color to red
+                className="h-4 w-4 text-red-500"
               >
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                 <line x1="12" y1="9" x2="12" y2="13" />
@@ -155,7 +285,7 @@ export default function StudentDashboard() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold text-red-500">100 000 FCFA</div> {/* Changed text color to red */}
+              <div className="text-xl font-semibold text-red-500">{formatCurrency(debt)}</div>
               <p className="text-xs text-muted-foreground">Dettes accumulées à ce jour</p>
             </CardContent>
           </Card>
@@ -168,8 +298,8 @@ export default function StudentDashboard() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">1 000 000 FCFA</div>
-              <p className="text-xs text-muted-foreground">Total année en cours + dettes</p>
+              <div className="text-xl font-bold">{formatCurrency(totalToPay)}</div>
+              <p className="text-xs text-muted-foreground">Reste à payer + dettes</p>
             </CardContent>
           </Card>
         </div>

@@ -58,11 +58,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isAuthLoading, token, router]);
 
-  // Show loading state or null while checking auth or if no user
-  if (isAuthLoading || !user) {
-    // Optionally return a loading spinner component here
-    return <div>Loading...</div>; // Or return null;
-  }
+  // // Show loading state or null while checking auth or if no user
+
 
   // Remove the open state since sidebar will be permanent
   // const [open, setOpen] = useState(true)
@@ -148,15 +145,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Determine menu items based on user role from context
   const menuItems =
-    user.role === "student" ? studentMenuItems : adminMenuItems;
+    user?.role === "student" ? studentMenuItems : adminMenuItems;
     // Note: Sous-admin logic needs adjustment if it's a separate role in your backend/context
 
   // Map English role to French path segment
-  const rolePathSegment = user.role === 'student' ? 'etudiant' : 'admin';
+  const rolePathSegment = user?.role === 'student' ? 'etudiant' : 'admin';
 
   // const userName = userType === "etudiant" ? "Jean Dupont" : userType === "admin" ? "Admin Principal" : "Sous-Admin"
   // Use user.name, user.email or user.matricule from context if available
-  const userName = user.name || (user.role === 'student' ? user.matricule : user.email) || 'Utilisateur';
+  const userName = user?.name || (user?.role === 'student' ? user?.matricule : user?.email) || 'Utilisateur';
 
   // const userInfo =
   //   userType === "etudiant" ? "Matricule: 12345" : userType === "admin" ? "Administrateur" : "Sous-Administrateur"
@@ -227,8 +224,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 {pathname === `/${rolePathSegment}/sous-admins` && "Gestion des sous-administrateurs"} {/* Admin only */}
               </h1>
               <p className="text-muted-foreground">
-                {pathname === `/${rolePathSegment}` && user.role !== "student" && "Bienvenue sur votre tableau de bord"}
-                {pathname === `/${rolePathSegment}/paiements` && user.role === "student"
+                {pathname === `/${rolePathSegment}` && user?.role !== "student" && "Bienvenue sur votre tableau de bord"}
+                {pathname === `/${rolePathSegment}/paiements` && user?.role === "student"
                   ? "Soumettre un nouveau paiement"
                   : pathname === `/${rolePathSegment}/paiements` && "Paiements en attente d'approbation"}
                 {pathname === `/${rolePathSegment}/historique` && "Consultez l'historique des paiements"}
