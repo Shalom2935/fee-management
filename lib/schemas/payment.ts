@@ -29,8 +29,19 @@ export const paymentSchema = z.object({
     }),
 });
 
+export const studentPaymentSchema = z.object({
+  payment_id: z.number(),
+  date: z.any(),
+  amount: z.number(),
+  reference: z.string(),
+  status: z.enum(["approved", "pending", "rejected"]),
+  rejectionReason: z.any().optional(),
+  //fileUrl: z.string().url(), // URL du fichier reçu du backend
+});
+
+export type StudentPayment = z.infer<typeof studentPaymentSchema>;
 // Inferred type for type safety
-export type PaymentFormData = z.infer<typeof paymentSchema>;
+export type PaymentData = z.infer<typeof paymentSchema>;
 
 // Type for flattened errors (useful for displaying errors per field)
 export type PaymentFormErrors = z.inferFlattenedErrors<typeof paymentSchema>;
