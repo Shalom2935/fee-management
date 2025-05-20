@@ -12,7 +12,7 @@ export const studentSchema = z.object({
   paid: z.number(),
   debt: z.number(),
   on_time: z.boolean(),
-  field_option: z.string().optional(),
+  field_option: z.any(),
   createdAt: z.any().optional(),
   updatedAt: z.any().optional(),
 })

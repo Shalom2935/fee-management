@@ -223,7 +223,7 @@ export default function PaymentHistory() {
       <div className="w-[90vw] md:w-full md:px-6">
         <Card>
           <CardHeader className="space-y-2 p-3 pb-1 pt-4 sm:p-4 sm:pb-2 md:p-6">
-            <CardTitle>Paiements</CardTitle>
+            <CardTitle className="text-xl md:text-xl">Paiements</CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 md:p-6">
             {/* ... (your existing search and table/mobile cards layout - unchanged) ... */}
