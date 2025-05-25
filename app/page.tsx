@@ -215,7 +215,7 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel>Matricule</FormLabel>
                         <FormControl>
-                          <Input placeholder="UN21P039SJ" {...field} />
+                          <Input placeholder="Matricule" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

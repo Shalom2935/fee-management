@@ -82,7 +82,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <DashboardLayout userType="admin">
+    <DashboardLayout>
       {/* Added padding wrapper */}
       <div className="px-4 sm:px-6 lg:px-8 space-y-6 max-w-4xl mx-auto"> {/* Widened max-width slightly */}
         {/* Removed top Separator, spacing handled by space-y-6 */}
@@ -193,13 +193,6 @@ export default function SettingsPage() {
               </div>
               <Switch id="notify-security" defaultChecked />
             </div>
-            <div className="flex items-center justify-between"> {/* Keep side-by-side */}
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <Label htmlFor="notify-deadlines">Échéances de paiement</Label>
-              </div>
-              <Switch id="notify-deadlines" defaultChecked />
-            </div>
             <Separator />
             <div className="space-y-1">
               <Label htmlFor="notification-method">Méthode de notification préférée</Label>
@@ -209,8 +202,6 @@ export default function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="both">Email et SMS</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,60 +1,287 @@
 "use client"
 
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Users, Clock, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight, Eye } from "lucide-react"
+import { Users, Clock, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight, Eye, Loader2, ServerCrash } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from '@/components/auth-context'
+import { PaymentsHistory, PaymentsHistoryArraySchema } from "@/lib/schemas/history"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Document, Page, pdfjs } from 'react-pdf';
+import dynamic from 'next/dynamic';
+
+// Interface pour les statistiques du tableau de bord
+interface DashboardStats {
+  totalStudents: {
+    count: number;
+    changePercent: number;
+    changeDirection: "up" | "down";
+  };
+  paymentCompliance: {
+    percentage: number;
+  };
+  pendingPayments: {
+    count: number;
+    changePercent: number;
+    changeDirection: "up" | "down";
+  };
+  overdueAccounts: {
+    count: number;
+    changePercent: number;
+    changeDirection: "up" | "down";
+  };
+}
+
+// Interface pour la répartition par école
+interface SchoolDistribution {
+  name: string;
+  studentCount: number;
+  upToDatePercentage: number;
+  overduePercentage: number;
+}
+
+// Exemple de données pour les paiements récents
+const recentPayments = [
+  {
+    id: 1,
+    student: "student1",
+    matricule: "matricule1",
+    school: "SJP",
+    amount: "100000",
+    status: "pending"
+  },
+  {
+    id: 2,
+    student: "student1",
+    matricule: "matricule1",
+    school: "SJP",
+    amount: "100000",
+    status: "pending"
+  },
+]
+
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+const DynamicTransformWrapper = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformWrapper), { ssr: false });
+const DynamicTransformComponent = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformComponent), { ssr: false });
 
 export default function AdminDashboard() {
-  const recentPayments = [
-    {
-      id: "PAY-001",
-      student: "Jean Dupont",
-      school: "SJP",
-      matricule: "SJP-2023-12345", 
-      amount: "200 000",
-      status: "pending",
-    },
-    {
-      id: "PAY-002",
-      student: "Marie Curie",
-      school: "SJP",
-      matricule: "SJP-2023-12346",
-      amount: "300 000", 
-      status: "approved",
-    },
-    {
-      id: "PAY-003",
-      student: "Pierre Martin",
-      school: "SJMB",
-      matricule: "SJMB-2023-12347",
-      amount: "150 000",
-      status: "rejected",
-    },
-    {
-      id: "PAY-004", 
-      student: "Sophie Dubois",
-      school: "SJP",
-      matricule: "SJP-2023-12348",
-      amount: "250 000",
-      status: "approved",
-    },
-    {
-      id: "PAY-005",
-      student: "Lucas Bernard", 
-      school: "SJMB",
-      matricule: "SJMB-2023-12349",
-      amount: "200 000",
-      status: "pending",
-    },
-  ]
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
+  const { token } = useAuth()
+  const [ dashboardData, setDashboardData ] = useState<DashboardStats>()
+  const [ isLoading, setIsLoading ] = useState<boolean>(true)
+  const [ schoolDistributionData, setSchoolDistributionData] = useState<SchoolDistribution[] | null>(null);
+  const [ schoolDistLoading, setSchoolDistLoading ] = useState<boolean>(true);
+  const [ schoolDistError, setSchoolDistError ] = useState<string | null>(null);
+  const [ recentPayments, setRecentPayments] = useState<PaymentsHistory[]>([]);
+  const [ recentPaymentsLoading, setRecentPaymentsLoading] = useState<boolean>(true);
+  const [ recentPaymentsError, setRecentPaymentsError ] = useState<string | null>(null);
+
+  // PDF/Image Viewer State
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPdfPage, setCurrentPdfPage] = useState(1);
+  const [pdfPageWidth, setPdfPageWidth] = useState(600);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+
+  const documentOptions = useMemo(() => ({
+    cMapUrl: "/cmaps/",
+    cMapPacked: true,
+  }), []);
+
+  useEffect( () => {
+    const fetchDashboardData = async () => {
+
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true)
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des données du tableau de bord")
+        }
+
+        const data = await response.json()
+        setDashboardData(data)
+      } catch (error) {
+        console.error("Erreur:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    const fetchSchoolDistributionData = async () => {
+      
+      if (!token) {
+        setSchoolDistLoading(false);
+        return;
+      }
+      setSchoolDistLoading(true)
+      setSchoolDistError(null)
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/dashboard/school-distribution`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des données de répartition par école")
+        }
+
+        const data = await response.json()
+        setSchoolDistributionData(data.schools || data); // adapt to your API shape
+      } catch (error: any) {
+        setSchoolDistError(error.message || "Erreur inconnue lors de la récupération de la répartition par école");
+        setSchoolDistributionData(null);
+      } finally {
+        setSchoolDistLoading(false);
+      }
+    }
+
+    const fetchRecentPayments = async () => {
+      if (!token) {
+        setRecentPaymentsLoading(false);
+        return;
+      }
+      setRecentPaymentsLoading(true);
+      setRecentPaymentsError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/history/recent?status=pending&limit=5`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des paiements récents");
+        }
+        const data = await response.json();
+        const parsed = PaymentsHistoryArraySchema.safeParse(data.payments || data);
+        if (!parsed.success) {
+          console.error("Erreur de validation des paiements récents:", parsed.error);
+          throw new Error("Format inattendu des paiements récents");
+        }
+        setRecentPayments(parsed.data);
+      } catch (error: any) {
+        setRecentPaymentsError(error.message || "Erreur inconnue lors de la récupération des paiements récents");
+        setRecentPayments([]);
+      } finally {
+        setRecentPaymentsLoading(false);
+      }
+    };
+
+    fetchDashboardData()
+    fetchSchoolDistributionData()
+    fetchRecentPayments()
+  }, [token])
+
+  // Fetch and display PDF/Image for a payment
+  const handleViewReceipt = async (paymentId: number) => {
+    setFileUrl(null);
+    setFileType(null);
+    setNumPages(null);
+    setCurrentPdfPage(1);
+    setPdfLoadError(null);
+    setShowPdfDialog(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/file/`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || errorData?.message || `Erreur ${response.status} lors du téléchargement du fichier.`);
+      }
+      const contentType = response.headers.get('content-type');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setFileUrl(url);
+      setFileType(contentType);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Une erreur inconnue est survenue.';
+      setPdfLoadError(`Impossible d'afficher le reçu: ${message}`);
+    }
+  };
+
+  // PDF Document Callbacks
+  const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
+    setNumPages(nextNumPages);
+    setCurrentPdfPage(1);
+    setPdfLoadError(null);
+  }, []);
+
+  const onDocumentLoadError = useCallback((error: Error) => {
+    setPdfLoadError(error.message || 'Failed to load PDF document.');
+    setNumPages(null);
+  }, []);
+
+  // PDF Page Width Effect
+  useEffect(() => {
+    if (!showPdfDialog || fileType?.toLowerCase() !== 'application/pdf') return;
+    const calculateWidth = () => {
+      if (typeof window !== 'undefined') {
+        setPdfPageWidth(Math.min(780, window.innerWidth * 0.85));
+      }
+    };
+    calculateWidth();
+    let timeoutId: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(calculateWidth, 150);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [showPdfDialog, fileType]);
+
+  // PDF Pagination Functions
+  const goToPrevPdfPage = () => setCurrentPdfPage((prev) => Math.max(1, prev - 1));
+  const goToNextPdfPage = () => numPages && setCurrentPdfPage((prev) => Math.min(numPages, prev + 1));
+
+  // Cleanup Blob URL when dialog closes or fileUrl changes
+  useEffect(() => {
+    let currentFileUrl = fileUrl;
+    return () => {
+      if (currentFileUrl && currentFileUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(currentFileUrl);
+      }
+    };
+  }, [fileUrl]);
+
+  // Helper for formatting amount
+  function formatAmount(amount: string | number) {
+    if (typeof amount === 'number') {
+      return amount.toLocaleString('fr-FR');
+    }
+    const num = Number(amount);
+    if (isNaN(num)) return amount;
+    return num.toLocaleString('fr-FR');
+  }
 
   return (
-    <DashboardLayout userType="admin">
+    <DashboardLayout>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -62,10 +289,10 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,248</div>
+            <div className="text-2xl font-bold">{dashboardData?.totalStudents.count}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-green-500" />
-              <span className="text-green-500 font-medium">+5.2%</span>
+              {dashboardData?.totalStudents.changeDirection === "up" ? <ArrowUpRight className="mr-1 h-3 w-3 text-green-500" /> : <ArrowDownRight className="mr-1 h-3 w-3 text-red-500" />}
+              <span className="text-green-500 font-medium">{dashboardData?.totalStudents.changePercent}%</span>
               <span className="ml-1">depuis le mois dernier</span>
             </div>
           </CardContent>
@@ -76,8 +303,8 @@ export default function AdminDashboard() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">68%</div>
-            <Progress value={68} className="h-2 mt-2" />
+            <div className="text-2xl font-bold">{dashboardData?.paymentCompliance.percentage}%</div>
+            <Progress value={dashboardData?.paymentCompliance.percentage} className="h-2 mt-2" />
             <p className="text-xs text-muted-foreground mt-2">Pourcentage d'étudiants à jour</p>
           </CardContent>
         </Card>
@@ -87,10 +314,18 @@ export default function AdminDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold">{dashboardData?.pendingPayments.count}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-red-500" />
-              <span className="text-red-500 font-medium">+12.5%</span>
+              {dashboardData?.pendingPayments.changeDirection === "up"
+                ? <ArrowUpRight className="mr-1 h-3 w-3 text-red-500" />
+                : <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />}
+              <span className={
+                dashboardData?.pendingPayments.changeDirection === "up"
+                  ? "text-red-500 font-medium"
+                  : "text-green-500 font-medium"
+              }>
+                {dashboardData?.pendingPayments.changePercent}%
+              </span>
               <span className="ml-1">depuis la semaine dernière</span>
             </div>
           </CardContent>
@@ -101,10 +336,18 @@ export default function AdminDashboard() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">398</div>
+            <div className="text-2xl font-bold">{dashboardData?.overdueAccounts.count}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />
-              <span className="text-green-500 font-medium">-2.5%</span>
+              {dashboardData?.overdueAccounts.changeDirection === "up"
+                ? <ArrowUpRight className="mr-1 h-3 w-3 text-red-500" />
+                : <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />}
+              <span className={
+                dashboardData?.overdueAccounts.changeDirection === "up"
+                  ? "text-red-500 font-medium"
+                  : "text-green-500 font-medium"
+              }>
+                {dashboardData?.overdueAccounts.changePercent}%
+              </span>
               <span className="ml-1">depuis le mois dernier</span>
             </div>
           </CardContent>
@@ -125,55 +368,71 @@ export default function AdminDashboard() {
           <CardContent>
             {/* Table for Desktop (hidden below md breakpoint) */}
             <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Étudiant</TableHead>
-                    <TableHead>École</TableHead>
-                    <TableHead>Matricule</TableHead>
-                    <TableHead>Montant</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>{payment.student}</TableCell>
-                      <TableCell>{payment.school}</TableCell>
-                      <TableCell>{payment.matricule}</TableCell>
-                      <TableCell>{payment.amount} FCFA</TableCell>
-                      <TableCell>
-                        {payment.status === "approved" && (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approuvé</Badge>
-                        )}
-                        {payment.status === "pending" && (
-                          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>
-                        )}
-                        {payment.status === "rejected" && (
-                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              {recentPaymentsLoading ? (
+                <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+                  <Loader2 className="animate-spin h-5 w-5" /> Chargement des paiements récents...
+                </div>
+              ) : recentPaymentsError ? (
+                <div className="text-red-600 text-sm py-4 flex items-center gap-2"><ServerCrash className="h-4 w-4" /> {recentPaymentsError}</div>
+              ) : recentPayments && recentPayments.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Étudiant</TableHead>
+                      <TableHead>École</TableHead>
+                      <TableHead>Matricule</TableHead>
+                      <TableHead>Montant</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {recentPayments.map((payment) => (
+                      <TableRow key={payment.payment_id}>
+                        <TableCell>{payment.student}</TableCell>
+                        <TableCell>{payment.school}</TableCell>
+                        <TableCell>{payment.matricule}</TableCell>
+                        <TableCell>{formatAmount(payment.amount)} FCFA</TableCell>
+                        <TableCell>
+                          {payment.status === "approved" && (
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approuvé</Badge>
+                          )}
+                          {payment.status === "pending" && (
+                            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>
+                          )}
+                          {payment.status === "rejected" && (
+                            <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" title="Voir le fichier" onClick={() => handleViewReceipt(payment.payment_id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-muted-foreground py-8 text-center">Aucun paiement récent trouvé.</div>
+              )}
             </div>
-
             {/* Cards for Mobile/Tablet (visible below md breakpoint) */}
             <div className="space-y-4 md:hidden">
-                {recentPayments.map((payment) => (
-                  <Card key={payment.id} className="bg-muted/30">
-                    <CardContent className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+              {recentPaymentsLoading ? (
+                <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+                  <Loader2 className="animate-spin h-5 w-5" /> Chargement des paiements récents...
+                </div>
+              ) : recentPaymentsError ? (
+                <div className="text-red-600 text-sm py-4 flex items-center gap-2"><ServerCrash className="h-4 w-4" /> {recentPaymentsError}</div>
+              ) : recentPayments && recentPayments.length > 0 ? (
+                recentPayments.map((payment) => (
+                  <Card className="bg-muted/30" key={payment.payment_id}>
+                    <CardContent className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 relative">
                       <div className="flex-1 space-y-1">
                         <p className="font-medium">{payment.student}</p>
                         <p className="text-sm text-muted-foreground">{payment.school} - {payment.matricule}</p>
-                        <p className="text-sm font-semibold">{payment.amount} FCFA</p>
+                        <p className="text-sm font-semibold">{formatAmount(payment.amount)} FCFA</p>
                       </div>
                       <div className="flex flex-col sm:items-end gap-2">
                         <div>
@@ -181,12 +440,18 @@ export default function AdminDashboard() {
                           {payment.status === "pending" && <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En attente</Badge>}
                           {payment.status === "rejected" && <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejeté</Badge>}
                         </div>
-                        {/* Optional: Keep the view button if needed */}
-                        {/* <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button> */}
+                        <div>
+                              <Button variant="ghost" size="icon" title="Voir le fichier" className="absolute right-4 bottom-4" onClick={() => handleViewReceipt(payment.payment_id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                ))
+              ) : (
+                <div className="text-muted-foreground py-8 text-center">Aucun paiement récent trouvé.</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -197,59 +462,118 @@ export default function AdminDashboard() {
             <CardDescription>Distribution des étudiants et paiements</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium">SJP</h4>
-                  <span className="text-sm text-muted-foreground">742 étudiants</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">Paiements à jour</span>
-                    <span className="text-xs">72%</span>
-                  </div>
-                  <Progress value={72} className="h-1" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">Paiements en retard</span>
-                    <span className="text-xs">28%</span>
-                  </div>
-                  <Progress value={28} className="h-1 bg-muted [&>div]:bg-red-500" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium">SJMB</h4>
-                  <span className="text-sm text-muted-foreground">506 étudiants</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">Paiements à jour</span>
-                    <span className="text-xs">63%</span>
-                  </div>
-                  <Progress value={63} className="h-1" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">Paiements en retard</span>
-                    <span className="text-xs">37%</span>
-                  </div>
-                  <Progress value={37} className="h-1 bg-muted [&>div]:bg-red-500" />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="grid grid-cols-2 gap-4">
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href="/admin/etudiants">
-                      <Users className="mr-2 h-4 w-4" />
-                      Gérer les étudiants
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+            {schoolDistLoading ? (
+      <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+        <Loader2 className="animate-spin h-5 w-5" /> Chargement de la répartition par école...
+      </div>
+    ) : schoolDistError ? (
+      <div className="text-red-600 text-sm py-4 flex items-center gap-2"><ServerCrash className="h-4 w-4" /> {schoolDistError}</div>
+    ) : schoolDistributionData && schoolDistributionData.length > 0 ? (
+      <div className="space-y-6">
+        {schoolDistributionData.map((school) => (
+          <div key={school.name}>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium">{school.name}</h4>
+              <span className="text-sm text-muted-foreground">{school.studentCount} étudiants</span>
             </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Paiements à jour</span>
+                <span className="text-xs">{school.upToDatePercentage}%</span>
+              </div>
+              <Progress value={school.upToDatePercentage} className="h-1" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Paiements en retard</span>
+                <span className="text-xs">{school.overduePercentage}%</span>
+              </div>
+              <Progress value={school.overduePercentage} className="h-1 bg-muted [&>div]:bg-red-500" />
+            </div>
+          </div>
+        ))}
+        <div className="pt-4 border-t">
+          <div className="flex">
+            <Button asChild variant="outline" className="w-auto">
+              <Link href="/admin/etudiants">
+                <Users className="mr-2 h-4 w-4" />
+                Gérer les étudiants
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="text-muted-foreground py-8 text-center">Aucune donnée de répartition disponible.</div>
+    )}
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showPdfDialog} onOpenChange={setShowPdfDialog}>
+    <DialogContent className="max-w-4xl w-[90vw] md:w-full h-[85vh] flex flex-col p-0">
+      <DialogHeader className="p-4 border-b">
+        <DialogTitle>Visualiseur de Reçu</DialogTitle>
+        <DialogDescription>
+          {fileType?.toLowerCase() === 'application/pdf' && numPages ? `Page ${currentPdfPage} sur ${numPages}` : 'Aperçu du fichier'}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
+        {!fileUrl && !pdfLoadError && (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">Chargement du fichier...</div>
+        )}
+        {pdfLoadError && (
+          <div className="flex-1 flex items-center justify-center text-red-500 p-4">{pdfLoadError}</div>
+        )}
+        {fileUrl && !pdfLoadError && (
+          <>
+            {fileType?.toLowerCase() === 'application/pdf' ? (
+              <>
+                <div className="flex-1 overflow-auto flex items-start justify-center p-1 sm:p-2">
+                  <Document
+                    file={fileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    options={documentOptions}
+                    loading={<div className="p-4 text-center text-muted-foreground">Chargement du PDF...</div>}
+                    error={<div className="p-4 text-center text-red-500">{pdfLoadError || "Erreur de chargement du document PDF."}</div>}
+                    className="flex justify-center"
+                  >
+                    {numPages && (
+                      <Page
+                        key={`page_${currentPdfPage}_${fileUrl}`}
+                        pageNumber={currentPdfPage}
+                        width={pdfPageWidth}
+                        renderAnnotationLayer={true}
+                        renderTextLayer={true}
+                        loading={<div className="p-2 text-center text-sm text-muted-foreground">Chargement de la page {currentPdfPage}...</div>}
+                        className="shadow-lg"
+                      />
+                    )}
+                  </Document>
+                </div>
+                {numPages && (
+                  <div className="flex items-center justify-center gap-2 py-2 px-4 border-t bg-background">
+                    <Button onClick={goToPrevPdfPage} disabled={currentPdfPage <= 1} variant="outline" size="sm">Précédent</Button>
+                    <span className="text-sm tabular-nums">Page {currentPdfPage} / {numPages}</span>
+                    <Button onClick={goToNextPdfPage} disabled={currentPdfPage >= numPages} variant="outline" size="sm">Suivant</Button>
+                  </div>
+                )}
+              </>
+            ) : fileType?.startsWith("image/") ? (
+              <div className="flex-1 overflow-auto flex items-center justify-center p-2">
+                <DynamicTransformWrapper>
+                  <DynamicTransformComponent contentStyle={{ width: '100%', height: '100%' }} wrapperStyle={{ width: '100%', height: '100%' }}>
+                    <img src={fileUrl} alt="Reçu" className="max-h-full mx-auto object-contain" />
+                  </DynamicTransformComponent>
+                </DynamicTransformWrapper>
+              </div>
+            ) : fileUrl && (
+              <div className="flex-1 flex items-center justify-center text-red-500 p-4">Format de fichier non supporté ou erreur de chargement.</div>
+            )}
+          </>
+        )}
+      </div>
+    </DialogContent>
+  </Dialog>
     </DashboardLayout>
   )
 }
