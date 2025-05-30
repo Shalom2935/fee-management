@@ -2,7 +2,8 @@
 export const SCHOOLS_LIST = [
   "SJP",
   "SJMB",
-  "SJH",
+  "SJHS",
+  "SJSL"
   // Add all your school names here
 ] as const; // Using 'as const' makes it a readonly tuple with literal types
 
@@ -14,7 +15,7 @@ export const PERIODS_LIST = [
 ] as const;
 
 export const FIELDS_LIST = [
-  "TC", "GIT", "GME", "GCI", "GP", "GMI", "BIF", "CCA", "Supply Chain", "BC", "RIM"
+  "TC", "GIT", "GME", "GCI", "GP", "GMI", "BIF", "CCA", "SC", "MC", "RH", "IE", "EDD", "BM", "RIM", "AO", "BGM", "A", "SI", "DT", "CL", "DFL", "DH", "DS", "DM"
 ] as const;
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
