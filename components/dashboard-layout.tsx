@@ -108,48 +108,50 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: Users,
       href: "/admin/etudiants",
     },
-    {
-      title: "Gestion des sous-administrateurs",
-      icon: UserCog,
-      href: "/admin/sous-admins",
-    },
+    // {
+    //   title: "Gestion des sous-administrateurs",
+    //   icon: UserCog,
+    //   href: "/admin/sous-admins", // TODO: Réactiver quand la gestion des sous-admins sera prête
+    // },
     {
       title: "Paramètres",
       icon: Settings,
       href: "/admin/parametres",
     },
+    // Removed Déconnexion from menu items
   ]
 
-  const sousAdminMenuItems = [
-    {
-      title: "Tableau de bord",
-      icon: Home,
-      href: "/sous-admin",
-    },
-    {
-      title: "Paiements en attente",
-      icon: CreditCard,
-      href: "/sous-admin/paiements",
-    },
-    {
-      title: "Historique des paiements",
-      icon: History,
-      href: "/sous-admin/historique",
-    },
-    {
-      title: "Paramètres",
-      icon: Settings,
-      href: "/sous-admin/parametres",
-    },
-  ]
+  // const sousAdminMenuItems = [
+  //   {
+  //     title: "Tableau de bord",
+  //     icon: Home,
+  //     href: "/sous-admin", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Paiements en attente",
+  //     icon: CreditCard,
+  //     href: "/sous-admin/paiements", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Historique des paiements",
+  //     icon: History,
+  //     href: "/sous-admin/historique", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Paramètres",
+  //     icon: Settings,
+  //     href: "/sous-admin/parametres", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  // ]
 
-  // Determine menu items based on user role from context
+  // Ne pas afficher le menu sous-admin/délégué
   const menuItems =
     user?.role === "student" ? studentMenuItems : adminMenuItems;
-    // Note: Sous-admin logic needs adjustment if it's a separate role in your backend/context
+  // TODO: Si le rôle sous-admin/délégué est réactivé, rétablir la logique ici
 
   // Map English role to French path segment
   const rolePathSegment = user?.role === 'student' ? 'etudiant' : 'admin';
+  // TODO: Si le rôle sous-admin/délégué est réactivé, gérer le segment ici
 
   // const userName = userType === "etudiant" ? "Jean Dupont" : userType === "admin" ? "Admin Principal" : "Sous-Admin"
   // Use user.name, user.email or user.matricule from context if available
@@ -292,3 +294,5 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </SidebarProvider>
   )
 }
+
+// TODO: Toutes les routes /admin/sous-admins doivent être désactivées ou commentées dans le code de navigation et de redirection.

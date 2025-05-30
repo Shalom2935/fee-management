@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -10,33 +10,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
-  DialogContent,
+  DialogContent, // DialogDescription is used, DialogFooter is used
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CheckCircle, Clock, Download, Eye, Search, ThumbsDown, ThumbsUp, XCircle } from "lucide-react"
+import { CheckCircle, Clock, Eye, Search, ThumbsDown, ThumbsUp, XCircle } from "lucide-react"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-context"
 import { PaymentsHistory, PaymentsHistoryArraySchema } from "@/lib/schemas/history"
-import { Document, Page, pdfjs } from "react-pdf"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import dynamic from "next/dynamic"
 import { useTableFilters } from "@/hooks/use-table-filters";
+import { PERIODS_LIST, SCHOOLS_LIST } from "@/config/constants";
+import { ReceiptViewerDialog } from "@/components/receipt-viewer-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PaymentStats {
   pending: number
   approved: number
   rejected: number
 }
-
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
-const DynamicTransformWrapper = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformWrapper), { ssr: false });
-// Correction: import dynamique pour DynamicTransformComponent
-const DynamicTransformComponent = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformComponent), { ssr: false });
 
 export default function PendingPayments() {
    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -46,23 +41,15 @@ export default function PendingPayments() {
     const [ payments, setPayments] = useState<PaymentsHistory[]>([])
     const [ paymentsLoading, setPaymentsLoading] = useState<boolean>(true)
     const [ paymentsError, setPaymentsError ] = useState<string | null>(null)
-    const [page, setPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
     const [totalPayments, setTotalPayments] = useState(0);
     const pageSize = 5;
   
     // PDF/Image Viewer State
     const [showPdfDialog, setShowPdfDialog] = useState(false);
-    const [fileUrl, setFileUrl] = useState<string | null>(null);
-    const [fileType, setFileType] = useState<string | null>(null);
-    const [numPages, setNumPages] = useState<number | null>(null);
-    const [currentPdfPage, setCurrentPdfPage] = useState(1);
-    const [pdfPageWidth, setPdfPageWidth] = useState(600);
-    const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+    const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
   
-    const documentOptions = useMemo(() => ({
-      cMapUrl: "/cmaps/",
-      cMapPacked: true,
-    }), []);
+    const { toast } = useToast();
   
     const {
       filters,
@@ -72,14 +59,13 @@ export default function PendingPayments() {
       debouncedFilters
     } = useTableFilters({ search: "", school: "", period: "", status: "pending" });
   
-    useEffect( () => {
-      const fetchPaymentStats = async () => {
-  
+    // Define fetch functions outside useEffect so they can be called independently
+    const fetchPaymentStats = useCallback(async () => {
         if (!token) {
           setIsLoading(false);
           return;
         }
-        setIsLoading(true)
+        setIsLoading(true);
         try {
           const response = await fetch(`${API_BASE_URL}/api/payments/stats`, {
             method: "GET",
@@ -88,21 +74,24 @@ export default function PendingPayments() {
               Authorization: `Bearer ${token}`,
             },
           })
-  
           if (!response.ok) {
-            throw new Error("Erreur lors de la récupération des données du tableau de bord")
+            throw new Error("Erreur lors de la récupération des statistiques de paiement")
           }
-  
           const data = await response.json()
           setPaymentStats(data)
         } catch (error) {
-          console.error("Erreur:", error)
+          console.error("Erreur fetchPaymentStats:", error);
+          toast({
+            variant: "destructive",
+            title: "Erreur de chargement",
+            description: error instanceof Error ? error.message : "Impossible de charger les statistiques.",
+          });
         } finally {
           setIsLoading(false)
         }
-      }
+      }, [token, API_BASE_URL, toast]);
   
-      const fetchPayments = async () => {
+    const fetchPayments = useCallback(async () => {
         if (!token) {
           setPaymentsLoading(false);
           return;
@@ -112,8 +101,8 @@ export default function PendingPayments() {
         try {
           const params = new URLSearchParams({
             status: debouncedFilters.status || "pending",
-            page: String(page),
-            limit: String(pageSize),
+            page: String(currentPage),
+            limit: String(pageSize)
           });
           if (debouncedFilters.search) params.append("search", debouncedFilters.search);
           if (debouncedFilters.school) params.append("school", debouncedFilters.school);
@@ -127,103 +116,46 @@ export default function PendingPayments() {
               },
             });
           if (!response.ok) {
-            throw new Error("Erreur lors de la récupération des paiements récents");
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Erreur lors de la récupération des paiements.");
           }
           const data = await response.json();
           const parsed = PaymentsHistoryArraySchema.safeParse(data.data || data.payments || []);
           if (!parsed.success) {
-            console.error("Erreur de validation des paiements récents:", parsed.error);
-            throw new Error("Format inattendu des paiements récents");
+            console.error("Erreur de validation des paiements:", parsed.error);
+            throw new Error("Format de réponse inattendu pour les paiements.");
           }
           setPayments(parsed.data);
           setTotalPayments(data.total || parsed.data.length);
         } catch (error: any) {
-          setPaymentsError(error.message || "Erreur inconnue lors de la récupération des paiements récents");
+          setPaymentsError(error.message || "Erreur inconnue lors de la récupération des paiements.");
           setPayments([]);
           setTotalPayments(0);
+          toast({
+            variant: "destructive",
+            title: "Erreur de chargement",
+            description: `Impossible de charger les paiements: ${error.message}`,
+          });
         } finally {
           setPaymentsLoading(false);
         }
-      };
+      }, [token, API_BASE_URL, debouncedFilters, currentPage, pageSize, toast]);
   
+    useEffect(() => {
       fetchPaymentStats()
       fetchPayments()
-    }, [token, page, debouncedFilters])
+    }, [fetchPaymentStats, fetchPayments]) // Depends on the memoized functions
+  
+    const refetchData = useCallback(() => {
+      fetchPaymentStats();
+      fetchPayments();
+    }, [fetchPaymentStats, fetchPayments]);
   
     // Fetch and display PDF/Image for a payment
-    const handleViewReceipt = async (paymentId: number) => {
-      setFileUrl(null);
-      setFileType(null);
-      setNumPages(null);
-      setCurrentPdfPage(1);
-      setPdfLoadError(null);
+    const handleViewReceipt = (paymentId: number) => {
+      setSelectedPaymentId(paymentId);
       setShowPdfDialog(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/file/`, {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          throw new Error(errorData?.detail || errorData?.message || `Erreur ${response.status} lors du téléchargement du fichier.`);
-        }
-        const contentType = response.headers.get('content-type');
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setFileUrl(url);
-        setFileType(contentType);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Une erreur inconnue est survenue.';
-        setPdfLoadError(`Impossible d'afficher le reçu: ${message}`);
-      }
     };
-  
-    // PDF Document Callbacks
-    const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
-      setNumPages(nextNumPages);
-      setCurrentPdfPage(1);
-      setPdfLoadError(null);
-    }, []);
-  
-    const onDocumentLoadError = useCallback((error: Error) => {
-      setPdfLoadError(error.message || 'Failed to load PDF document.');
-      setNumPages(null);
-    }, []);
-  
-    // PDF Page Width Effect
-    useEffect(() => {
-      if (!showPdfDialog || fileType?.toLowerCase() !== 'application/pdf') return;
-      const calculateWidth = () => {
-        if (typeof window !== 'undefined') {
-          setPdfPageWidth(Math.min(780, window.innerWidth * 0.85));
-        }
-      };
-      calculateWidth();
-      let timeoutId: NodeJS.Timeout;
-      const handleResize = () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(calculateWidth, 150);
-      };
-      window.addEventListener('resize', handleResize);
-      return () => {
-        clearTimeout(timeoutId);
-        window.removeEventListener('resize', handleResize);
-      };
-    }, [showPdfDialog, fileType]);
-  
-    // PDF Pagination Functions
-    const goToPrevPdfPage = () => setCurrentPdfPage((prev) => Math.max(1, prev - 1));
-    const goToNextPdfPage = () => numPages && setCurrentPdfPage((prev) => Math.min(numPages, prev + 1));
-  
-    // Cleanup Blob URL when dialog closes or fileUrl changes
-    useEffect(() => {
-      let currentFileUrl = fileUrl;
-      return () => {
-        if (currentFileUrl && currentFileUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(currentFileUrl);
-        }
-      };
-    }, [fileUrl]);
   
     // Helper for formatting amount
     function formatAmount(amount: string | number) {
@@ -246,6 +178,95 @@ export default function PendingPayments() {
     "Justificatif illisible",
     "Autre raison"
   ];
+
+  // Add loading states for actions
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  // Approve payment handler
+  const handleApprovePayment = async (payment: PaymentsHistory) => {
+    setIsApproving(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/${payment.payment_id}/approve`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Erreur lors de la validation du paiement");
+      // Optimistic update: remove from pending list
+      setPayments(prev => prev.filter(p => p.payment_id !== payment.payment_id));
+
+      setShowApproveDialog(false);
+      setSelectedPayment(null);
+      toast({
+        title: "Paiement validé",
+        description: "Le paiement a été approuvé avec succès.",
+        action: (
+          <Button variant="ghost" onClick={refetchData}>
+            Actualiser
+          </Button>
+        ),
+      });
+      // Add a short delay before refetching to allow toast to be seen
+      setTimeout(() => {
+        refetchData();
+      }, 1000); // 1-second delay
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur de validation",
+        description: error.message || "Une erreur inconnue est survenue lors de la validation.",
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Reject payment handler
+  const handleRejectPayment = async (payment: PaymentsHistory, reason: string) => {
+    setIsRejecting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/payments/${payment.payment_id}/reject`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rejection_reason: reason }),
+      });
+      if (!response.ok) throw new Error("Erreur lors du rejet du paiement");
+      // Optimistic update: remove from pending list
+      setPayments(prev => prev.filter(p => p.payment_id !== payment.payment_id));
+
+      setShowRejectDialog(false);
+      setSelectedPayment(null);
+      setRejectReason("");
+      setRejectPreset("");
+      toast({
+        title: "Paiement rejeté",
+        description: "Le paiement a été rejeté avec succès.",
+        action: (
+          <Button variant="ghost" onClick={refetchData}>
+            Actualiser
+          </Button>
+        ),
+      });
+      // Add a short delay before refetching to allow toast to be seen
+      setTimeout(() => {
+        refetchData();
+      }, 1000); // 1-second delay
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur de rejet",
+        description: error.message || "Une erreur inconnue est survenue lors du rejet.",
+      });
+    } finally {
+      setIsRejecting(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -311,8 +332,9 @@ export default function PendingPayments() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les écoles</SelectItem>
-                  <SelectItem value="sjp">SJP</SelectItem>
-                  <SelectItem value="sjmb">SJMB</SelectItem>
+                  {SCHOOLS_LIST.map((school) => (
+                    <SelectItem key={school.toLowerCase()} value={school.toLowerCase()}>{school}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={filters.period} onValueChange={setPeriod}>
@@ -321,10 +343,9 @@ export default function PendingPayments() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les périodes</SelectItem>
-                  <SelectItem value="today">Aujourd'hui</SelectItem>
-                  <SelectItem value="this-week">Cette semaine</SelectItem>
-                  <SelectItem value="this-month">Ce mois</SelectItem>
-                  <SelectItem value="last-3-months">3 derniers mois</SelectItem>
+                  {PERIODS_LIST.map((period) => (
+                    <SelectItem key={period.value} value={period.value}>{period.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -369,7 +390,9 @@ export default function PendingPayments() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction className="bg-green-500 hover:bg-green-400"  onClick={() => {/* TODO: call approve API */ setShowApproveDialog(false); setSelectedPayment(null); }}>Valider</AlertDialogAction>
+                              <AlertDialogAction className="bg-green-500 hover:bg-green-400" onClick={() => handleApprovePayment(payment)} disabled={isApproving}>
+                                {isApproving ? "Validation..." : "Valider"}
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -388,18 +411,30 @@ export default function PendingPayments() {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <div className="space-y-2 py-2">
-                              <label className="block text-sm font-medium"></label>
-                              <select className="w-full border rounded p-2" value={rejectPreset} onChange={e => { setRejectPreset(e.target.value); setRejectReason(e.target.value !== "Autre raison" ? e.target.value : ""); }}>
-                                <option value="">Choisir une raison...</option>
-                                {rejectPresets.map(r => <option key={r} value={r}>{r}</option>)}
-                              </select>
+                              <Label className="block text-sm font-medium">Motif</Label>
+                              <Select value={rejectPreset} onValueChange={value => {
+                                setRejectPreset(value);
+                                setRejectReason(value !== "Autre raison" ? value : "");
+                              }}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Choisir une raison..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="null">Choisir une raison...</SelectItem>
+                                  {rejectPresets.map(r => (
+                                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               {rejectPreset === "Autre raison" && (
                                 <textarea className="w-full border rounded p-2 mt-2" placeholder="Saisir la raison..." value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
                               )}
                             </div>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-500 hover:bg-red-400" disabled={!rejectPreset || (rejectPreset === "Autre raison" && !rejectReason)} onClick={() => {/* TODO: call reject API with reason */ setShowRejectDialog(false); setSelectedPayment(null); setRejectReason(""); setRejectPreset(""); }}>Rejeter</AlertDialogAction>
+                              <AlertDialogAction className="bg-red-500 hover:bg-red-400" disabled={!rejectPreset || (rejectPreset === "Autre raison" && !rejectReason) || isRejecting} onClick={() => handleRejectPayment(payment, rejectReason || rejectPreset)}>
+                                {isRejecting ? "Rejet..." : "Rejeter"}
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -433,69 +468,14 @@ export default function PendingPayments() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-2 flex justify-end border-t mt-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8">
-                        <Eye className="h-3.5 w-3.5 mr-1" />
-                        Détails
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Détails du paiement</DialogTitle>
-                        <DialogDescription>
-                          Informations complètes sur le paiement
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Étudiant</Label>
-                          <div className="col-span-3">{payment.student}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">École</Label>
-                          <div className="col-span-3">{payment.matricule.substring(0, 3)}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Matricule</Label>
-                          <div className="col-span-3">{payment.matricule}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Montant</Label>
-                          <div className="col-span-3">{formatAmount(payment.amount)} FCFA</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Date</Label>
-                          <div className="col-span-3">{payment.date}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Méthode</Label>
-                          <div className="col-span-3">{payment.method}</div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label className="text-right font-medium">Référence</Label>
-                          <div className="col-span-3">{payment.receipt}</div>
-                        </div>
-                      </div>
-                      <div className="flex justify-center">
-                        <Button className="mx-2 bg-green-600 hover:bg-green-700">
-                          <ThumbsUp className="mr-2 h-4 w-4" />
-                          Approuver
-                        </Button>
-                        <Button variant="outline" className="mx-2 text-red-600 border-red-600 hover:bg-red-50">
-                          <ThumbsDown className="mr-2 h-4 w-4" />
-                          Rejeter
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button variant="ghost" size="sm" className="h-8 text-green-600">
-                    <CheckCircle className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                    Approuver
+                  <Button variant="ghost" size="sm" className="h-8" title="Voir le reçu" onClick={() => handleViewReceipt(payment.payment_id)}>
+                    <Eye className="h-3.5 w-3.5 mr-1" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-red-600">
+                  <Button variant="ghost" size="sm" className="h-8 text-green-600" title="Approuver" onClick={() => { setSelectedPayment(payment); setShowApproveDialog(true); }}>
+                    <CheckCircle className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-red-600" title="Rejeter" onClick={() => { setSelectedPayment(payment); setShowRejectDialog(true); }}>
                     <XCircle className="h-3.5 w-3.5 mr-1" />
-                    Rejeter
                   </Button>
                 </CardFooter>
               </Card>
@@ -507,10 +487,10 @@ export default function PendingPayments() {
               Affichage de {payments.length} paiements sur {totalPayments}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || paymentsLoading}>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || paymentsLoading}>
                 Précédent
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={payments.length < pageSize || (page * pageSize) >= totalPayments || paymentsLoading}>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={payments.length < pageSize || (currentPage * pageSize) >= totalPayments || paymentsLoading}>
                 Suivant
               </Button>
             </div>
@@ -518,72 +498,13 @@ export default function PendingPayments() {
         </CardContent>
       </Card>
       </div> {/* Close the outer padding wrapper */}
-            <Dialog open={showPdfDialog} onOpenChange={setShowPdfDialog}>
-          <DialogContent className="max-w-4xl w-[90vw] md:w-full h-[85vh] flex flex-col p-0">
-            <DialogHeader className="p-4 border-b">
-              <DialogTitle>Visualiseur de Reçu</DialogTitle>
-              <DialogDescription>
-                {fileType?.toLowerCase() === 'application/pdf' && numPages ? `Page ${currentPdfPage} sur ${numPages}` : 'Aperçu du fichier'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
-              {!fileUrl && !pdfLoadError && (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">Chargement du fichier...</div>
-              )}
-              {pdfLoadError && (
-                <div className="flex-1 flex items-center justify-center text-red-500 p-4">{pdfLoadError}</div>
-              )}
-              {fileUrl && !pdfLoadError && (
-                <>
-                  {fileType?.toLowerCase() === 'application/pdf' ? (
-                    <>
-                      <div className="flex-1 overflow-auto flex items-start justify-center p-1 sm:p-2">
-                        <Document
-                          file={fileUrl}
-                          onLoadSuccess={onDocumentLoadSuccess}
-                          onLoadError={onDocumentLoadError}
-                          options={documentOptions}
-                          loading={<div className="p-4 text-center text-muted-foreground">Chargement du PDF...</div>}
-                          error={<div className="p-4 text-center text-red-500">{pdfLoadError || "Erreur de chargement du document PDF."}</div>}
-                          className="flex justify-center"
-                        >
-                          {numPages && (
-                            <Page
-                              key={`page_${currentPdfPage}_${fileUrl}`}
-                              pageNumber={currentPdfPage}
-                              width={pdfPageWidth}
-                              renderAnnotationLayer={true}
-                              renderTextLayer={true}
-                              loading={<div className="p-2 text-center text-sm text-muted-foreground">Chargement de la page {currentPdfPage}...</div>}
-                              className="shadow-lg"
-                            />
-                          )}
-                        </Document>
-                      </div>
-                      {numPages && (
-                        <div className="flex items-center justify-center gap-2 py-2 px-4 border-t bg-background">
-                          <Button onClick={goToPrevPdfPage} disabled={currentPdfPage <= 1} variant="outline" size="sm">Précédent</Button>
-                          <span className="text-sm tabular-nums">Page {currentPdfPage} / {numPages}</span>
-                          <Button onClick={goToNextPdfPage} disabled={currentPdfPage >= numPages} variant="outline" size="sm">Suivant</Button>
-                        </div>
-                      )}
-                    </>
-                  ) : fileType?.startsWith("image/") ? (
-                    <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                      <DynamicTransformWrapper>
-                        <DynamicTransformComponent contentStyle={{ width: '100%', height: '100%' }} wrapperStyle={{ width: '100%', height: '100%' }}>
-                          <img src={fileUrl} alt="Reçu" className="max-h-full mx-auto object-cover" />
-                        </DynamicTransformComponent>
-                      </DynamicTransformWrapper>
-                    </div>
-                  ) : fileUrl && (
-                    <div className="flex-1 flex items-center justify-center text-red-500 p-4">Format de fichier non supporté ou erreur de chargement.</div>
-                  )}
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+            {/* PDF/Image Viewer Modal (reusable) */}
+            <ReceiptViewerDialog
+              open={showPdfDialog}
+              onOpenChange={setShowPdfDialog}
+              paymentId={selectedPaymentId ?? 0}
+              token={token? token : ""}
+            />
     </DashboardLayout>
   )
 }

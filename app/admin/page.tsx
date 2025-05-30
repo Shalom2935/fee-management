@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -11,9 +11,7 @@ import { Users, Clock, AlertTriangle, CheckCircle, ArrowUpRight, ArrowDownRight,
 import Link from "next/link"
 import { useAuth } from '@/components/auth-context'
 import { PaymentsHistory, PaymentsHistoryArraySchema } from "@/lib/schemas/history"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { Document, Page, pdfjs } from 'react-pdf';
-import dynamic from 'next/dynamic';
+import { ReceiptViewerDialog } from "@/components/receipt-viewer-dialog";
 
 // Interface pour les statistiques du tableau de bord
 interface DashboardStats {
@@ -45,30 +43,6 @@ interface SchoolDistribution {
   overduePercentage: number;
 }
 
-// Exemple de données pour les paiements récents
-const recentPayments = [
-  {
-    id: 1,
-    student: "student1",
-    matricule: "matricule1",
-    school: "SJP",
-    amount: "100000",
-    status: "pending"
-  },
-  {
-    id: 2,
-    student: "student1",
-    matricule: "matricule1",
-    school: "SJP",
-    amount: "100000",
-    status: "pending"
-  },
-]
-
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
-const DynamicTransformWrapper = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformWrapper), { ssr: false });
-const DynamicTransformComponent = dynamic(() => import('react-zoom-pan-pinch').then(mod => mod.TransformComponent), { ssr: false });
-
 export default function AdminDashboard() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -84,17 +58,7 @@ export default function AdminDashboard() {
 
   // PDF/Image Viewer State
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [currentPdfPage, setCurrentPdfPage] = useState(1);
-  const [pdfPageWidth, setPdfPageWidth] = useState(600);
-  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
-
-  const documentOptions = useMemo(() => ({
-    cMapUrl: "/cmaps/",
-    cMapPacked: true,
-  }), []);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
 
   useEffect( () => {
     const fetchDashboardData = async () => {
@@ -195,80 +159,11 @@ export default function AdminDashboard() {
     fetchRecentPayments()
   }, [token])
 
-  // Fetch and display PDF/Image for a payment
-  const handleViewReceipt = async (paymentId: number) => {
-    setFileUrl(null);
-    setFileType(null);
-    setNumPages(null);
-    setCurrentPdfPage(1);
-    setPdfLoadError(null);
+  // Replace handleViewReceipt to use selectedPaymentId
+  const handleViewReceipt = (paymentId: number) => {
+    setSelectedPaymentId(paymentId);
     setShowPdfDialog(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/file/`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || errorData?.message || `Erreur ${response.status} lors du téléchargement du fichier.`);
-      }
-      const contentType = response.headers.get('content-type');
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setFileUrl(url);
-      setFileType(contentType);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Une erreur inconnue est survenue.';
-      setPdfLoadError(`Impossible d'afficher le reçu: ${message}`);
-    }
   };
-
-  // PDF Document Callbacks
-  const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
-    setNumPages(nextNumPages);
-    setCurrentPdfPage(1);
-    setPdfLoadError(null);
-  }, []);
-
-  const onDocumentLoadError = useCallback((error: Error) => {
-    setPdfLoadError(error.message || 'Failed to load PDF document.');
-    setNumPages(null);
-  }, []);
-
-  // PDF Page Width Effect
-  useEffect(() => {
-    if (!showPdfDialog || fileType?.toLowerCase() !== 'application/pdf') return;
-    const calculateWidth = () => {
-      if (typeof window !== 'undefined') {
-        setPdfPageWidth(Math.min(780, window.innerWidth * 0.85));
-      }
-    };
-    calculateWidth();
-    let timeoutId: NodeJS.Timeout;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(calculateWidth, 150);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [showPdfDialog, fileType]);
-
-  // PDF Pagination Functions
-  const goToPrevPdfPage = () => setCurrentPdfPage((prev) => Math.max(1, prev - 1));
-  const goToNextPdfPage = () => numPages && setCurrentPdfPage((prev) => Math.min(numPages, prev + 1));
-
-  // Cleanup Blob URL when dialog closes or fileUrl changes
-  useEffect(() => {
-    let currentFileUrl = fileUrl;
-    return () => {
-      if (currentFileUrl && currentFileUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(currentFileUrl);
-      }
-    };
-  }, [fileUrl]);
 
   // Helper for formatting amount
   function formatAmount(amount: string | number) {
@@ -315,7 +210,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData?.pendingPayments.count}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            {/* <div className="flex items-center text-xs text-muted-foreground">
               {dashboardData?.pendingPayments.changeDirection === "up"
                 ? <ArrowUpRight className="mr-1 h-3 w-3 text-red-500" />
                 : <ArrowDownRight className="mr-1 h-3 w-3 text-green-500" />}
@@ -327,7 +222,7 @@ export default function AdminDashboard() {
                 {dashboardData?.pendingPayments.changePercent}%
               </span>
               <span className="ml-1">depuis la semaine dernière</span>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
         <Card>
@@ -507,73 +402,12 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={showPdfDialog} onOpenChange={setShowPdfDialog}>
-    <DialogContent className="max-w-4xl w-[90vw] md:w-full h-[85vh] flex flex-col p-0">
-      <DialogHeader className="p-4 border-b">
-        <DialogTitle>Visualiseur de Reçu</DialogTitle>
-        <DialogDescription>
-          {fileType?.toLowerCase() === 'application/pdf' && numPages ? `Page ${currentPdfPage} sur ${numPages}` : 'Aperçu du fichier'}
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
-        {!fileUrl && !pdfLoadError && (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">Chargement du fichier...</div>
-        )}
-        {pdfLoadError && (
-          <div className="flex-1 flex items-center justify-center text-red-500 p-4">{pdfLoadError}</div>
-        )}
-        {fileUrl && !pdfLoadError && (
-          <>
-            {fileType?.toLowerCase() === 'application/pdf' ? (
-              <>
-                <div className="flex-1 overflow-auto flex items-start justify-center p-1 sm:p-2">
-                  <Document
-                    file={fileUrl}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={onDocumentLoadError}
-                    options={documentOptions}
-                    loading={<div className="p-4 text-center text-muted-foreground">Chargement du PDF...</div>}
-                    error={<div className="p-4 text-center text-red-500">{pdfLoadError || "Erreur de chargement du document PDF."}</div>}
-                    className="flex justify-center"
-                  >
-                    {numPages && (
-                      <Page
-                        key={`page_${currentPdfPage}_${fileUrl}`}
-                        pageNumber={currentPdfPage}
-                        width={pdfPageWidth}
-                        renderAnnotationLayer={true}
-                        renderTextLayer={true}
-                        loading={<div className="p-2 text-center text-sm text-muted-foreground">Chargement de la page {currentPdfPage}...</div>}
-                        className="shadow-lg"
-                      />
-                    )}
-                  </Document>
-                </div>
-                {numPages && (
-                  <div className="flex items-center justify-center gap-2 py-2 px-4 border-t bg-background">
-                    <Button onClick={goToPrevPdfPage} disabled={currentPdfPage <= 1} variant="outline" size="sm">Précédent</Button>
-                    <span className="text-sm tabular-nums">Page {currentPdfPage} / {numPages}</span>
-                    <Button onClick={goToNextPdfPage} disabled={currentPdfPage >= numPages} variant="outline" size="sm">Suivant</Button>
-                  </div>
-                )}
-              </>
-            ) : fileType?.startsWith("image/") ? (
-              <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                <DynamicTransformWrapper>
-                  <DynamicTransformComponent contentStyle={{ width: '100%', height: '100%' }} wrapperStyle={{ width: '100%', height: '100%' }}>
-                    <img src={fileUrl} alt="Reçu" className="max-h-full mx-auto object-contain" />
-                  </DynamicTransformComponent>
-                </DynamicTransformWrapper>
-              </div>
-            ) : fileUrl && (
-              <div className="flex-1 flex items-center justify-center text-red-500 p-4">Format de fichier non supporté ou erreur de chargement.</div>
-            )}
-          </>
-        )}
-      </div>
-    </DialogContent>
-  </Dialog>
+  <ReceiptViewerDialog
+    open={showPdfDialog}
+    onOpenChange={setShowPdfDialog}
+    paymentId={selectedPaymentId ?? 0}
+    token={token || ""}
+  />
     </DashboardLayout>
   )
 }

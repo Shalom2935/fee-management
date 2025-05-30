@@ -25,21 +25,7 @@ import {
   // DialogFooter, // No longer needed for pdfLoadError specifically here
 } from "@/components/ui/dialog"
 import dynamic from 'next/dynamic';
-
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
-
-const DynamicTransformWrapper = dynamic(
-  () => import('react-zoom-pan-pinch').then(mod => mod.TransformWrapper),
-  { ssr: false }
-);
-const DynamicTransformComponent = dynamic(
-  () => import('react-zoom-pan-pinch').then(mod => mod.TransformComponent),
-  { ssr: false }
-);
+import { ReceiptViewerDialog } from "@/components/receipt-viewer-dialog";
 
 const PDF_VIEWER_MAX_WIDTH_DIALOG = 780; // Max width for PDF page in dialog
 const PDF_VIEWER_WIDTH_PERCENTAGE_DIALOG = 0.85; // % of window width for PDF in dialog
@@ -53,13 +39,8 @@ export default function PaymentHistory() {
   const [search, setSearch] = useState("")
 
   // State for PDF/Image Viewer Dialog
-  const [showPdfDialog, setShowPdfDialog] = useState(false); // Renamed for clarity
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [currentPdfPage, setCurrentPdfPage] = useState(1);
-  const [pdfPageWidth, setPdfPageWidth] = useState(600); // Default, will be updated
-  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
 
   const documentOptions = useMemo(() => ({
     cMapUrl: "/cmaps/", // Make sure cmaps are in public/cmaps/
@@ -126,97 +107,11 @@ export default function PaymentHistory() {
     p.date?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Fetch and display PDF/Image
-  const handleViewReceipt = async (paymentId: number) => {
-    setFileUrl(null);
-    setFileType(null);
-    setNumPages(null);
-    setCurrentPdfPage(1); // Reset for new PDF
-    setPdfLoadError(null);
-    setShowPdfDialog(true); // Open dialog immediately, show loading inside
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payments/${paymentId}/file/`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || errorData?.message || `Erreur ${response.status} lors du téléchargement du fichier.`);
-      }
-      const contentType = response.headers.get('content-type');
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setFileUrl(url);
-      setFileType(contentType);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Une erreur inconnue est survenue.';
-      setPdfLoadError(`Impossible d'afficher le reçu: ${message}`);
-      // No need to setShowPdfDialog(true) again, it's already open
-    }
+  // Replace handleViewReceipt to just set selectedPaymentId and open dialog
+  const handleViewReceipt = (paymentId: number) => {
+    setSelectedPaymentId(paymentId);
+    setShowPdfDialog(true);
   };
-
-  // PDF Document Callbacks
-  const onDocumentLoadSuccess = useCallback(({ numPages: nextNumPages }: { numPages: number }) => {
-    setNumPages(nextNumPages);
-    setCurrentPdfPage(1); // Ensure it starts at page 1 for a newly loaded doc
-    setPdfLoadError(null); // Clear any previous error
-  }, []);
-
-  const onDocumentLoadError = useCallback((error: Error) => {
-    console.error('Error while loading PDF document:', error);
-    setPdfLoadError(error.message || 'Failed to load PDF document.');
-    setNumPages(null);
-  }, []);
-
-  // PDF Page Width Effect
-  useEffect(() => {
-    if (!showPdfDialog || fileType?.toLowerCase() !== 'application/pdf') {
-      return;
-    }
-
-    const calculateWidth = () => {
-      if (typeof window !== 'undefined') {
-        setPdfPageWidth(Math.min(PDF_VIEWER_MAX_WIDTH_DIALOG, window.innerWidth * PDF_VIEWER_WIDTH_PERCENTAGE_DIALOG));
-      }
-    };
-
-    calculateWidth(); // Initial calculation
-
-    let timeoutId: NodeJS.Timeout;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(calculateWidth, 150);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [showPdfDialog, fileType]);
-
-  // PDF Pagination Functions
-  const goToPrevPdfPage = () => {
-    setCurrentPdfPage((prevPage) => Math.max(1, prevPage - 1));
-  };
-
-  const goToNextPdfPage = () => {
-    if (numPages) {
-      setCurrentPdfPage((prevPage) => Math.min(numPages, prevPage + 1));
-    }
-  };
-
-  // Cleanup Blob URL when dialog closes or fileUrl changes
-  useEffect(() => {
-    let currentFileUrl = fileUrl;
-    return () => {
-      if (currentFileUrl && currentFileUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(currentFileUrl);
-      }
-    };
-  }, [fileUrl]);
-
 
   return (
     <DashboardLayout>
@@ -306,6 +201,7 @@ export default function PaymentHistory() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {/* Replace Button onClick for receipt with new handler */}
                         <Button variant="ghost" size="icon" title="Voir les détails" onClick={() => handleViewReceipt(payment.payment_id)}>
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -381,90 +277,13 @@ export default function PaymentHistory() {
         </Card>
       </div>
 
-      {/* PDF/Image Viewer Modal */}
-      <Dialog open={showPdfDialog} onOpenChange={setShowPdfDialog}>
-        <DialogContent className="max-w-4xl w-[90vw] md:w-full h-[85vh] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle>Visualiseur de Reçu</DialogTitle>
-            <DialogDescription>
-              {fileType?.toLowerCase() === 'application/pdf' && numPages ? `Page ${currentPdfPage} sur ${numPages}` : 'Aperçu du fichier'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
-            {!fileUrl && !pdfLoadError && (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">Chargement du fichier...</div>
-            )}
-            {pdfLoadError && (
-                <div className="flex-1 flex items-center justify-center text-red-500 p-4">{pdfLoadError}</div>
-            )}
-
-            {fileUrl && !pdfLoadError && (
-              <>
-                {fileType?.toLowerCase() === 'application/pdf' ? (
-                  <>
-                    <div className="flex-1 overflow-auto flex items-start justify-center p-1 sm:p-2">
-                      <Document
-                        file={fileUrl}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        onLoadError={onDocumentLoadError}
-                        options={documentOptions}
-                        loading={<div className="p-4 text-center text-muted-foreground">Chargement du PDF...</div>}
-                        error={<div className="p-4 text-center text-red-500">{pdfLoadError || "Erreur de chargement du document PDF."}</div>}
-                        className="flex justify-center" // Center Document component if its content is narrower
-                      >
-                        {numPages && ( // Only render Page if numPages is known
-                          <Page
-                            key={`page_${currentPdfPage}_${fileUrl}`}
-                            pageNumber={currentPdfPage}
-                            width={pdfPageWidth}
-                            renderAnnotationLayer={true}
-                            renderTextLayer={true}
-                            loading={<div className="p-2 text-center text-sm text-muted-foreground">Chargement de la page {currentPdfPage}...</div>}
-                            className="shadow-lg" // Add some styling to the page
-                          />
-                        )}
-                      </Document>
-                    </div>
-                    {numPages && (
-                      <div className="flex items-center justify-center gap-2 py-2 px-4 border-t bg-background">
-                        <Button onClick={goToPrevPdfPage} disabled={currentPdfPage <= 1} variant="outline" size="sm">
-                          Précédent
-                        </Button>
-                        <span className="text-sm tabular-nums">
-                          Page {currentPdfPage} / {numPages}
-                        </span>
-                        <Button onClick={goToNextPdfPage} disabled={currentPdfPage >= numPages} variant="outline" size="sm">
-                          Suivant
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                ) : fileType?.startsWith("image/") ? (
-                  <div className="flex-1 overflow-auto flex items-center justify-center p-2">
-                    <DynamicTransformWrapper>
-                      <DynamicTransformComponent
-                        contentStyle={{ width: '100%', height: '100%' }}
-                        wrapperStyle={{ width: '100%', height: '100%' }}
-                      >
-                        <img
-                          src={fileUrl}
-                          alt="Reçu"
-                          className="max-h-full max-w-full object-contain" // Changed from max-h-[70vh]
-                        />
-                      </DynamicTransformComponent>
-                    </DynamicTransformWrapper>
-                  </div>
-                ) : fileUrl && ( // If fileUrl is present but type is not PDF/Image or error occurred before type check
-                  <div className="flex-1 flex items-center justify-center text-red-500 p-4">
-                    Format de fichier non supporté ou erreur de chargement.
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* PDF/Image Viewer Modal (reusable) */}
+      <ReceiptViewerDialog
+        open={showPdfDialog}
+        onOpenChange={setShowPdfDialog}
+        paymentId={selectedPaymentId ?? 0}
+        token={token}
+      />
     </DashboardLayout>
   );
 }

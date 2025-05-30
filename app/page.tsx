@@ -181,7 +181,7 @@ export default function LoginPage() {
               </svg>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Système de Gestion des Frais</CardTitle>
+          <CardTitle className="text-2xl font-bold">Gestion des Payments</CardTitle>
           <CardDescription>Connectez-vous pour accéder à votre compte</CardDescription>
         </CardHeader>
         <CardContent>

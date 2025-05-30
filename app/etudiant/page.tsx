@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,7 +43,6 @@ export default function StudentDashboard() {
             "Content-Type": "application/json",
           },
         })
-
         let data = null
         if (
           response.headers.get("content-length") !== "0" &&
@@ -66,6 +65,24 @@ export default function StudentDashboard() {
         }
 
         setUserData(result.data)
+
+        // --- Fetch total_amount for the student's profile (academic year, level, GCI) ---
+        const academicYear = new Date().getMonth() >= 8 ? `${new Date().getFullYear()}-${new Date().getFullYear() + 1}` : `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+        const academicYearToString = academicYear.toString()
+        const isGCI = (result.data.field || "").toUpperCase().includes("GCI")
+        const level = result.data.current_year
+        const totalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-profiles/me/total?academic_year=${academicYearToString}&level=${level}&is_gci=${isGCI}`
+        const totalRes = await fetch(totalApiUrl, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        let totalData = null
+        if (totalRes.headers.get("content-length") !== "0" && totalRes.headers.get("content-type")?.includes("application/json")) {
+          totalData = await totalRes.json()
+        }
+        if (!totalRes.ok) {
+          throw new Error(totalData?.message || "Impossible de récupérer le montant total du profil.")
+        }
+        setTotalAmount(Number(totalData.total_amount || 0))
       } catch (err) {
         const message = err instanceof Error ? err.message : "Une erreur inconnue est survenue."
         setError(message)
@@ -82,8 +99,74 @@ export default function StudentDashboard() {
     fetchUserData()
   }, [token, toast])
 
+  // --- State for total_amount from API ---
+  const [totalAmount, setTotalAmount] = useState<number>(0)
+
+  // Import Students Section
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setImportFile(e.target.files[0])
+      setImportError(null)
+      setImportSuccess(null)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setImportFile(e.dataTransfer.files[0])
+      setImportError(null)
+      setImportSuccess(null)
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    if (!isDragging) setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  async function handleImportUpload() {
+    if (!importFile) return
+    setImportLoading(true)
+    setImportError(null)
+    setImportSuccess(null)
+    try {
+      const formData = new FormData()
+      formData.append("file", importFile)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/students/import`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.message || "Erreur lors de l'import du fichier.")
+      }
+      setImportSuccess("Importation réussie !")
+      setImportFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    } catch (err: any) {
+      setImportError(err.message)
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
   // Calcul du pourcentage de progression
-  const total = 900000
+  const total = totalAmount // Utilise le montant total récupéré dynamiquement
   const paid = userData?.paid ?? 0
   const progress = total > 0 ? Math.round((paid / total) * 100) : 0
   const debt = userData?.debt ?? 0

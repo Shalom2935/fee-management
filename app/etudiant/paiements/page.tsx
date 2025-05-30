@@ -310,7 +310,7 @@ export default function PaymentSubmission() {
                     <div className="flex flex-col items-center justify-center text-center">
                       <Upload className="h-8 w-8 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground mb-2">
-                        {receiptFile ? receiptFile.name : (isTouchDevice ? "Appuyez pour prendre une photo" : "Glissez-déposez votre reçu ici ou")}
+                        {receiptFile ? receiptFile.name : (isTouchDevice ? "Appuyez pour choisir" : "Glissez-déposez votre reçu ici ou")}
                       </p>
                       <Button type="button" variant="outline" size="sm" className="h-9 pointer-events-none" disabled={isLoading}>
                         {isTouchDevice ? "Choisir depuis l'appareil" : "Parcourir les fichiers"}

@@ -19,6 +19,7 @@ import {
 import { CheckCircle, Clock, Download, Eye, Search, ThumbsDown, ThumbsUp, XCircle } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { PERIODS_LIST } from "@/config/constants"
 
 export default function SubAdminPayments() {
   // Définition de l'école du sous-admin (SJP dans cet exemple)
@@ -110,10 +111,9 @@ export default function SubAdminPayments() {
                   <SelectValue placeholder="Période" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes les périodes</SelectItem>
-                  <SelectItem value="today">Aujourd'hui</SelectItem>
-                  <SelectItem value="this-week">Cette semaine</SelectItem>
-                  <SelectItem value="this-month">Ce mois</SelectItem>
+                  {PERIODS_LIST.map((period) => (
+                    <SelectItem key={period.value} value={period.value}>{period.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

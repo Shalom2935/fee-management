@@ -58,7 +58,7 @@ export default function SousAdminSettingsPage() {
   }
 
   return (
-    <DashboardLayout userType="sous-admin">
+    <DashboardLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
         <Separator />
         

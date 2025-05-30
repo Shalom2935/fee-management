@@ -56,6 +56,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('authUser', JSON.stringify(userData));
     setToken(newToken);
     setUser(userData);
+    // Set token in cookie for middleware (expires in 7 days, path=/, secure if https)
+    document.cookie = `token=${newToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
     // Redirect happens in the login page component after calling login
   };
 

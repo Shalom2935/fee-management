@@ -8,6 +8,7 @@ export const PaymentsHistorySchema = z.object({
   amount: z.union([z.string(), z.number()]),
   date: z.string().optional(),
   status: z.enum(["pending", "approved", "rejected"]),
+  rejection_reason: z.string().optional(),
   //fileUrl: z.url(), // URL to the payment file (PDF/image)
 });
 
