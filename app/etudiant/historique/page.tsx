@@ -1,5 +1,13 @@
 "use client"
 
+import { useEffect, useState, useMemo, useCallback } from "react" // Added useCallback
+import { useAuth } from "@/components/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { z } from "zod"
+// import { paymentSchema } from "@/lib/schemas/payment" // Not used directly
+// import { PaymentData } from "@/lib/schemas/payment" // Not used directly
+import { studentPaymentSchema, StudentPayment } from "@/lib/schemas/payment"
+import { formatCurrency } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -14,75 +22,117 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
+  // DialogFooter, // No longer needed for pdfLoadError specifically here
 } from "@/components/ui/dialog"
+import dynamic from 'next/dynamic';
+import { ReceiptViewerDialog } from "@/components/receipt-viewer-dialog";
+
+const PDF_VIEWER_MAX_WIDTH_DIALOG = 780; // Max width for PDF page in dialog
+const PDF_VIEWER_WIDTH_PERCENTAGE_DIALOG = 0.85; // % of window width for PDF in dialog
 
 export default function PaymentHistory() {
-  // Sample payment history data
-  const payments = [
-    {
-      id: "PAY-001",
-      date: "20/04/2024",
-      amount: "200 000",
-      status: "approved",
-      receipt: "REF-45678",
-    },
-    {
-      id: "PAY-002",
-      date: "15/03/2024",
-      amount: "300 000",
-      status: "approved",
-      receipt: "REF-45679",
-    },
-    {
-      id: "PAY-003",
-      date: "10/02/2024",
-      amount: "150 000",
-      status: "rejected",
-      receipt: "REF-45680",
-      rejectionReason: "Preuve de paiement illisible", // Added rejection reason
-    },
-    {
-      id: "PAY-004",
-      date: "05/01/2024",
-      amount: "150 000",
-      status: "approved",
-      receipt: "REF-45681",
-    },
-    {
-      id: "PAY-005",
-      date: "10/12/2023",
-      amount: "200 000",
-      status: "rejected",
-      receipt: "REF-45682",
-      rejectionReason: "Montant incorrect", // Added rejection reason
-    },
-  ]
+  const { token } = useAuth()
+  const { toast } = useToast()
+  const [payments, setPayments] = useState<StudentPayment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+
+  // State for PDF/Image Viewer Dialog
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+
+  const documentOptions = useMemo(() => ({
+    cMapUrl: "/cmaps/", // Make sure cmaps are in public/cmaps/
+    cMapPacked: true,
+    // standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`, // Optional
+  }), []);
+
+  useEffect(() => {
+    if (!token) {
+      setError("Authentification requise. Veuillez vous reconnecter.")
+      setIsLoading(false)
+      return
+    }
+    const fetchPayments = async () => {
+      // ... (your existing fetchPayments logic - unchanged)
+      setIsLoading(true)
+      setError(null)
+      try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payments/`
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+        let data = null
+        if (
+          response.headers.get("content-length") !== "0" &&
+          response.headers.get("content-type")?.includes("application/json")
+        ) {
+          data = await response.json()
+        }
+        if (!response.ok) {
+          const errorMessage = data?.message || `Erreur ${response.status}: Impossible de récupérer les paiements.`
+          
+          throw new Error(errorMessage)
+        }
+        const schema = z.array(studentPaymentSchema)
+        const result = schema.safeParse(data)
+        if (!result.success) {
+          console.error("Validation error:", result.error)
+          throw new Error("Réponse invalide reçue du serveur.")
+        }
+        setPayments(result.data)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Une erreur inconnue est survenue."
+        setError(message)
+        toast({
+          variant: "destructive",
+          title: "Erreur de chargement",
+          description: message,
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchPayments()
+  }, [token, toast])
+
+  const filteredPayments = payments.filter((p: any) =>
+    p.reference?.toLowerCase().includes(search.toLowerCase()) ||
+    p.amount?.toString().replace(/\s/g, "").includes(search.replace(/\s/g, "")) ||
+    p.date?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Replace handleViewReceipt to just set selectedPaymentId and open dialog
+  const handleViewReceipt = (paymentId: number) => {
+    setSelectedPaymentId(paymentId);
+    setShowPdfDialog(true);
+  };
 
   return (
-    <DashboardLayout userType="etudiant">
-      {/* Standardized padding wrapper */}
-      <div className="w-full px-4 sm:px-6 lg:px-8">
-        <Card> {/* Removed mx-auto to fill padded width */}
-          <CardHeader className="space-y-2"> {/* Removed internal padding */}
-            <CardTitle>Historique des paiements</CardTitle>
-            <CardDescription>Consultez l'historique de vos paiements</CardDescription>
+    <DashboardLayout>
+      <div className="w-[90vw] md:w-full md:px-6">
+        <Card>
+          <CardHeader className="space-y-2 p-3 pb-1 pt-4 sm:p-4 sm:pb-2 md:p-6">
+            <CardTitle className="text-xl md:text-xl">Paiements</CardTitle>
           </CardHeader>
-          <CardContent> {/* Removed internal padding */}
-            {/* Search and Export Section */}
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            {/* ... (your existing search and table/mobile cards layout - unchanged) ... */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <div className="relative flex-1 min-w-0"> {/* Added min-w-0 to prevent overflow */}
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Rechercher un paiement..."
                   className="pl-9 h-10 w-full"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="h-10 w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                Exporter
-              </Button>
             </div>
 
             {/* Desktop Table View */}
@@ -98,11 +148,26 @@ export default function PaymentHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id}>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">Chargement des paiements...</TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && error && (
+                     <TableRow>
+                      <TableCell colSpan={5} className="text-center text-red-500">{error}</TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && !error && filteredPayments.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">Aucun paiement trouvé.</TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && !error && filteredPayments.map((payment) => (
+                    <TableRow key={payment.payment_id}>
                       <TableCell>{payment.date}</TableCell>
-                      <TableCell>{payment.amount}</TableCell>
-                      <TableCell>{payment.receipt}</TableCell>
+                      <TableCell>{formatCurrency(payment.amount, undefined, undefined, false)}</TableCell>
+                      <TableCell>{payment.reference}</TableCell>
                       <TableCell>
                         {payment.status === "approved" ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -136,7 +201,8 @@ export default function PaymentHistory() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" title="Voir les détails">
+                        {/* Replace Button onClick for receipt with new handler */}
+                        <Button variant="ghost" size="icon" title="Voir les détails" onClick={() => handleViewReceipt(payment.payment_id)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -147,20 +213,25 @@ export default function PaymentHistory() {
             </div>
 
             {/* Mobile Cards View */}
-            <div className="grid gap-4 md:hidden">
-              {payments.map((payment) => (
-                <Card key={payment.id} className="overflow-hidden w-full">
-                  <CardHeader className="p-4 pb-3"> {/* Simplified padding */}
+            <div className="grid gap-4  md:hidden">
+             {isLoading && <p className="text-center">Chargement des paiements...</p>}
+             {!isLoading && error && <p className="text-center text-red-500">{error}</p>}
+             {!isLoading && !error && filteredPayments.length === 0 && (
+                <p className="text-center">Aucun paiement trouvé.</p>
+              )}
+              {!isLoading && !error && filteredPayments.map((payment) => (
+                <Card key={payment.payment_id} className="overflow-hidden w-full relative">
+                  <CardHeader className="p-4 pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1.5">
                         <CardTitle className="text-lg font-semibold">
-                          {payment.amount} FCFA
+                          {formatCurrency(payment.amount)}
                         </CardTitle>
                         <CardDescription className="text-sm">
                           {payment.date}
                         </CardDescription>
                         <p className="text-sm text-muted-foreground">
-                          Reçu: {payment.receipt}
+                          Reçu: {payment.reference}
                         </p>
                       </div>
                       {payment.status === "approved" ? (
@@ -193,24 +264,26 @@ export default function PaymentHistory() {
                           En attente
                         </Badge>
                       )}
+                      <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none absolute bottom-3 right-4" onClick={() => handleViewReceipt(payment.payment_id)}>
+                        <Eye className="h-4 w-4" />
+                        Voir Reçu
+                      </Button>
                     </div>
                   </CardHeader>
-                  <CardFooter className="px-4 py-3 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap border-t bg-muted/5"> {/* Stack buttons on xs */}
-                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Détails
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none">
-                      <Download className="h-4 w-4 mr-2" />
-                      Reçu
-                    </Button>
-                  </CardFooter>
                 </Card>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* PDF/Image Viewer Modal (reusable) */}
+      <ReceiptViewerDialog
+        open={showPdfDialog}
+        onOpenChange={setShowPdfDialog}
+        paymentId={selectedPaymentId ?? 0}
+        token={token}
+      />
     </DashboardLayout>
-  )
+  );
 }

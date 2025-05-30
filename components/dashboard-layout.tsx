@@ -2,10 +2,11 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation" // Added useRouter
 import { Home, CreditCard, History, Settings, Users, LogOut, BarChart3, FileText, UserCog, Menu, X } from "lucide-react"
+import { useAuth } from "@/components/auth-context" // Import useAuth
 
 import {
   Sidebar,
@@ -40,14 +41,26 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 
+// Remove userType prop, get it from context
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userType: "etudiant" | "admin" | "sous-admin"
 }
 
-export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
-  // const [mobileMenuOpen, setMobileMenuOpen] = useState(false) // State not needed for Sheet
+  const router = useRouter();
+  const { user, logout, isLoading: isAuthLoading, token } = useAuth(); // Get user, logout, loading state, and token from context
+
+  // Redirect to login if not authenticated and not loading
+  useEffect(() => {
+    if (!isAuthLoading && !token) {
+      router.push('/');
+    }
+  }, [isAuthLoading, token, router]);
+
+  // // Show loading state or null while checking auth or if no user
+
+
   // Remove the open state since sidebar will be permanent
   // const [open, setOpen] = useState(true)
 
@@ -72,12 +85,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       icon: Settings,
       href: "/etudiant/parametres",
     },
-    // Add logout at the end of navigation
-    {
-      title: "Déconnexion",
-      icon: LogOut,
-      href: "/logout",
-    },
   ]
 
   const adminMenuItems = [
@@ -101,63 +108,54 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       icon: Users,
       href: "/admin/etudiants",
     },
-    {
-      title: "Gestion des sous-administrateurs",
-      icon: UserCog,
-      href: "/admin/sous-admins",
-    },
+    // {
+    //   title: "Gestion des sous-administrateurs",
+    //   icon: UserCog,
+    //   href: "/admin/sous-admins", // TODO: Réactiver quand la gestion des sous-admins sera prête
+    // },
     {
       title: "Paramètres",
       icon: Settings,
       href: "/admin/parametres",
     },
-    {
-      title: "Déconnexion",
-      icon: LogOut,
-      href: "/logout",
-    },
+    // Removed Déconnexion from menu items
   ]
 
-  const sousAdminMenuItems = [
-    {
-      title: "Tableau de bord",
-      icon: Home,
-      href: "/sous-admin",
-    },
-    {
-      title: "Paiements en attente",
-      icon: CreditCard,
-      href: "/sous-admin/paiements",
-    },
-    {
-      title: "Historique des paiements",
-      icon: History,
-      href: "/sous-admin/historique",
-    },
-    {
-      title: "Paramètres",
-      icon: Settings,
-      href: "/sous-admin/parametres",
-    },
-    {
-      title: "Déconnexion",
-      icon: LogOut,
-      href: "/logout",
-    },
-  ]
+  // const sousAdminMenuItems = [
+  //   {
+  //     title: "Tableau de bord",
+  //     icon: Home,
+  //     href: "/sous-admin", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Paiements en attente",
+  //     icon: CreditCard,
+  //     href: "/sous-admin/paiements", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Historique des paiements",
+  //     icon: History,
+  //     href: "/sous-admin/historique", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  //   {
+  //     title: "Paramètres",
+  //     icon: Settings,
+  //     href: "/sous-admin/parametres", // TODO: Désactivé temporairement (voir instructions)
+  //   },
+  // ]
 
+  // Ne pas afficher le menu sous-admin/délégué
   const menuItems =
-    userType === "etudiant" ? studentMenuItems : userType === "admin" ? adminMenuItems : sousAdminMenuItems
+    user?.role === "student" ? studentMenuItems : adminMenuItems;
+  // TODO: Si le rôle sous-admin/délégué est réactivé, rétablir la logique ici
 
-  // These user details might be better fetched from context/auth state later
-  // const userTitle =
-  //   userType === "etudiant"
-  //     ? "Compte Étudiant"
-  //     : userType === "admin"
-  //       ? "Compte Administrateur"
-  //       : "Compte Sous-Administrateur"
+  // Map English role to French path segment
+  const rolePathSegment = user?.role === 'student' ? 'etudiant' : 'admin';
+  // TODO: Si le rôle sous-admin/délégué est réactivé, gérer le segment ici
 
   // const userName = userType === "etudiant" ? "Jean Dupont" : userType === "admin" ? "Admin Principal" : "Sous-Admin"
+  // Use user.name, user.email or user.matricule from context if available
+  const userName = user?.name || (user?.role === 'student' ? user?.matricule : user?.email) || 'Utilisateur';
 
   // const userInfo =
   //   userType === "etudiant" ? "Matricule: 12345" : userType === "admin" ? "Administrateur" : "Sous-Administrateur"
@@ -166,7 +164,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen bg-gray-50">
         {/* Desktop sidebar - hidden on mobile */}
-        <Sidebar userType={userType} variant="sidebar" className="hidden md:flex">
+        <Sidebar className="hidden md:flex">
           <SidebarHeader className="flex h-14 items-end justify-center border-b">
             {/* Remove the sidebar trigger since it's now permanent */}
             <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center mb-2">
@@ -200,6 +198,15 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                  {/* Logout Button - separate from dynamic items */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={logout} tooltip="Déconnexion" className="w-full">
+                      <div className="flex items-center gap-2 w-full">
+                        <LogOut className="text-red-600" />
+                        <span>Déconnexion</span>
+                      </div>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -209,23 +216,24 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         <SidebarInset className="p-4 md:p-6 w-full">
           <div className="flex items-center justify-between mb-6">
             <div>
+              {/* Use rolePathSegment for path comparisons */}
               <h1 className="text-xl md:text-2xl font-bold text-blue-900"> {/* Responsive font size */}
-                {pathname === `/${userType}` && userType === "etudiant" ? "Tableau de bord" : pathname === `/${userType}` && "Tableau de bord"}
-                {pathname === `/${userType}/paiements` && "Paiements"}
-                {pathname === `/${userType}/historique` && "Historique des paiements"}
-                {pathname === `/${userType}/parametres` && "Paramètres"}
-                {pathname === `/${userType}/etudiants` && "Gestion des étudiants"}
-                {pathname === `/${userType}/sous-admins` && "Gestion des sous-administrateurs"}
+                {pathname === `/${rolePathSegment}` && "Tableau de bord"}
+                {pathname === `/${rolePathSegment}/paiements` && "Paiements"}
+                {pathname === `/${rolePathSegment}/historique` && "Historique des paiements"}
+                {pathname === `/${rolePathSegment}/parametres` && "Paramètres"}
+                {pathname === `/${rolePathSegment}/etudiants` && "Gestion des étudiants"} {/* Admin only */}
+                {pathname === `/${rolePathSegment}/sous-admins` && "Gestion des sous-administrateurs"} {/* Admin only */}
               </h1>
               <p className="text-muted-foreground">
-                {pathname === `/${userType}` && userType !== "etudiant" && "Bienvenue sur votre tableau de bord"}
-                {pathname === `/${userType}/paiements` && userType === "etudiant"
+                {pathname === `/${rolePathSegment}` && user?.role !== "student" && "Bienvenue sur votre tableau de bord"}
+                {pathname === `/${rolePathSegment}/paiements` && user?.role === "student"
                   ? "Soumettre un nouveau paiement"
-                  : pathname === `/${userType}/paiements` && "Paiements en attente d'approbation"}
-                {pathname === `/${userType}/historique` && "Consultez l'historique de vos paiements"}
-                {pathname === `/${userType}/parametres` && "Gérez les paramètres de votre compte"}
-                {pathname === `/${userType}/etudiants` && "Gérez les comptes étudiants"}
-                {pathname === `/${userType}/sous-admins` && "Gérez les comptes des sous-administrateurs"}
+                  : pathname === `/${rolePathSegment}/paiements` && "Paiements en attente d'approbation"}
+                {pathname === `/${rolePathSegment}/historique` && "Consultez l'historique des paiements"}
+                {pathname === `/${rolePathSegment}/parametres` && "Gérez les paramètres de votre compte"}
+                {pathname === `/${rolePathSegment}/etudiants` && "Gérez les comptes étudiants"} {/* Admin only */}
+                {pathname === `/${rolePathSegment}/sous-admins` && "Gérez les comptes des sous-administrateurs"} {/* Admin only */}
               </p>
             </div>
 
@@ -257,17 +265,25 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 </SheetHeader>
                 <div className="py-4">
                   {menuItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-100 ${
-                        pathname === item.href ? "bg-blue-50 text-blue-700 font-medium" : ""
-                      }`}
-                    >
-                      <item.icon className={`h-5 w-5 ${item.title === "Déconnexion" ? "text-red-600" : "text-blue-600"}`} />
-                      <span>{item.title}</span>
-                    </Link>
+                    // Use SheetClose for navigation items to close the sheet on click
+                    // <SheetClose asChild key={item.href}>
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-100 ${
+                          pathname === item.href ? "bg-blue-50 text-blue-700 font-medium" : ""
+                        }`}
+                      >
+                        <item.icon className={`h-5 w-5 text-blue-600`} />
+                        <span>{item.title}</span>
+                      </Link>
+                    // </SheetClose>
                   ))}
+                  {/* Logout Button for Mobile Sheet */}
+                  <button onClick={logout} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-100 w-full text-left">
+                    <LogOut className="h-5 w-5 text-red-600" />
+                    <span>Déconnexion</span>
+                  </button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -278,3 +294,5 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     </SidebarProvider>
   )
 }
+
+// TODO: Toutes les routes /admin/sous-admins doivent être désactivées ou commentées dans le code de navigation et de redirection.

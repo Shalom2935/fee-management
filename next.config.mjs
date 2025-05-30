@@ -6,7 +6,7 @@ try {
 }
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+let nextConfig = { // Changed to let to allow modification after merge
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -21,9 +21,29 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  // We will define/override the webpack config after the merge
 }
 
 mergeConfig(nextConfig, userConfig)
+
+// Ensure our webpack modifications are robustly applied,
+// even if userConfig had its own webpack function.
+const originalWebpackConfig = nextConfig.webpack;
+
+nextConfig.webpack = (config, options) => { // options includes { isServer, webpack, defaultLoaders, ... }
+  let modifiedConfig = config;
+
+  // If there was a webpack config from userConfig (or the initial one), run it first.
+  if (typeof originalWebpackConfig === 'function') {
+    modifiedConfig = originalWebpackConfig(modifiedConfig, options);
+  }
+
+  // Now, apply our canvas fix to the potentially modified config.
+  if (!options.isServer) {
+    modifiedConfig.externals = [...(modifiedConfig.externals || []), 'canvas'];
+  }
+  return modifiedConfig;
+};
 
 function mergeConfig(nextConfig, userConfig) {
   if (!userConfig) {
