@@ -1,0 +1,224 @@
+# Fee Management - Guide de Déploiement
+
+Ce document explique comment déployer l'application Next.js "Fee Management" sur un serveur (par exemple, un serveur Apache).
+
+## Table des Matières
+
+1.  [Prérequis](#prérequis)
+2.  [Configuration du Projet](#configuration-du-projet)
+    *   [Clonage du Dépôt](#clonage-du-dépôt)
+    *   [Installation des Dépendances](#installation-des-dépendances)
+    *   [Variables d'Environnement](#variables-denvironnement)
+3.  [Build de l'Application](#build-de-lapplication)
+4.  [Exécution de l'Application en Production](#exécution-de-lapplication-en-production)
+    *   [Avec le Serveur Next.js Intégré](#avec-le-serveur-nextjs-intégré)
+    *   [Avec PM2 (Recommandé)](#avec-pm2-recommandé)
+5.  [Configuration d'Apache en tant que Reverse Proxy](#configuration-dapache-en-tant-que-reverse-proxy)
+6.  [Mises à Jour](#mises-à-jour)
+7.  [Scripts Utiles](#scripts-utiles)
+
+## 1. Prérequis
+
+Avant de commencer, assurez-vous que les éléments suivants sont installés et configurés sur votre serveur :
+
+*   **Node.js**: Version 18.x ou ultérieure (LTS recommandée). Vous pouvez le vérifier avec `node -v`.
+*   **npm** (inclus avec Node.js) ou **yarn**. Vérifiez avec `npm -v` ou `yarn -v`.
+*   **Git**: Pour cloner le dépôt du projet.
+*   **Accès au serveur**: Via SSH ou un autre moyen.
+*   **Modules Apache**: `mod_proxy` et `mod_proxy_http` doivent être activés pour la configuration du reverse proxy.
+    ```bash
+    sudo a2enmod proxy
+    sudo a2enmod proxy_http
+    sudo systemctl restart apache2
+    ```
+*   **PM2 (Fortement Recommandé)**: Un gestionnaire de processus pour Node.js. Installez-le globalement :
+    ```bash
+    sudo npm install pm2 -g
+    ```
+
+## 2. Configuration du Projet
+
+### Clonage du Dépôt
+
+1.  Connectez-vous à votre serveur.
+2.  Naviguez vers le répertoire où vous souhaitez héberger l'application (ex: `/var/www/`).
+
+    Nous n'utiliserons pas Git, copiez les fichiers du projet sur le serveur dans un dossier `fee-management`.
+
+### Installation des Dépendances
+
+Installez les dépendances du projet :
+
+Avec npm :
+```bash
+npm install
+```
+Ou avec yarn :
+```bash
+yarn install
+```
+
+### Variables d'Environnement
+
+L'application nécessite une variable d'environnement pour connaître l'URL de base de votre API backend.
+
+Créez un fichier `.env.local` à la racine du projet :
+```bash
+nano .env.local
+```
+Ajoutez la variable suivante (remplacez l'URL par celle de votre API backend) :
+```
+NEXT_PUBLIC_API_BASE_URL=https://votre-api.domaine.com
+```
+**Important :** Assurez-vous que l'API backend est déployée et accessible depuis le serveur où l'application frontend sera hébergée.
+
+## 3. Build de l'Application
+
+Une fois les dépendances installées et les variables d'environnement configurées, compilez l'application Next.js pour la production :
+
+Avec npm :
+```bash
+npm run build
+```
+Ou avec yarn :
+```bash
+yarn build
+```
+Cette commande créera un dossier `.next` optimisé pour la production.
+
+## 4. Exécution de l'Application en Production
+
+### Avec le Serveur Next.js Intégré
+
+Vous pouvez démarrer l'application avec le serveur de production intégré de Next.js (port 3000 par défaut) :
+
+Avec npm :
+```bash
+npm run start
+```
+Ou avec yarn :
+```bash
+yarn start
+```
+L'application sera accessible sur http://localhost:3000.
+
+**Attention :** Cette méthode n'est pas recommandée pour la production car l'application ne redémarre pas automatiquement en cas de crash.
+
+### Avec PM2 (Recommandé)
+
+PM2 maintient l'application en vie, la redémarre en cas de crash et facilite la gestion des logs.
+
+Démarrer l'application avec PM2 (npm) :
+```bash
+pm run build
+pm install -g pm2 # si ce n'est pas déjà fait
+pm run start &
+pm2 start npm --name "fee-management" -- run start
+```
+Ou avec yarn :
+```bash
+yarn build
+yarn global add pm2 # si ce n'est pas déjà fait
+yarn start &
+pm2 start yarn --name "fee-management" -- run start
+```
+
+Sauvegarder la liste des processus PM2 :
+```bash
+pm2 save
+```
+Configurer PM2 pour démarrer au lancement du système :
+```bash
+pm2 startup
+```
+PM2 affichera une commande à exécuter avec les droits superutilisateur. Copiez et exécutez cette commande.
+
+Commandes PM2 utiles :
+- Lister tous les processus : `pm2 list`
+- Voir les logs : `pm2 logs fee-management`
+- Arrêter un processus : `pm2 stop fee-management`
+- Redémarrer un processus : `pm2 restart fee-management`
+- Supprimer un processus : `pm2 delete fee-management`
+
+## 5. Configuration d'Apache en tant que Reverse Proxy
+
+Une fois l'application Next.js démarrée (généralement sur http://localhost:3000), configurez Apache pour agir comme reverse proxy.
+
+Créez un fichier de configuration VirtualHost, par exemple `/etc/apache2/sites-available/fee-management.conf` :
+```apache
+<VirtualHost *:80>
+    ServerName votre-domaine.com
+    # Optionnel: ServerAlias www.votre-domaine.com
+
+    ProxyPreserveHost On
+    ProxyRequests Off
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+
+    # Logs
+    ErrorLog ${APACHE_LOG_DIR}/fee-management-error.log
+    CustomLog ${APACHE_LOG_DIR}/fee-management-access.log combined
+
+    # WebSockets (optionnel)
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} websocket [NC]
+    RewriteCond %{HTTP:Connection} upgrade [NC]
+    RewriteRule /(.*) ws://localhost:3000/$1 [P,L]
+</VirtualHost>
+```
+- `ServerName` : Le domaine principal pour accéder à l'application.
+- `ProxyPass` et `ProxyPassReverse` : Redirigent les requêtes vers Next.js.
+- Adaptez le port si besoin.
+
+Activez le site et la réécriture :
+```bash
+sudo a2ensite fee-management.conf
+sudo a2enmod rewrite # si vous utilisez la partie WebSockets
+```
+Testez la configuration Apache :
+```bash
+sudo apache2ctl configtest
+```
+Rechargez Apache :
+```bash
+sudo systemctl reload apache2
+```
+Ou redémarrez Apache :
+```bash
+sudo systemctl restart apache2
+```
+
+Votre application devrait maintenant être accessible via http://votre-domaine.com.
+
+**Note sur HTTPS (SSL/TLS) :** Pour la production, il est fortement recommandé d'utiliser HTTPS. Utilisez Let's Encrypt (Certbot) pour configurer un certificat SSL sur Apache.
+
+## 6. Mises à Jour
+
+Pour mettre à jour l'application :
+
+1. Connectez-vous au serveur et placez-vous dans le dossier du projet (`/var/www/fee-management`).
+2. Récupérez les dernières modifications :
+```bash
+git pull origin main # ou la branche que vous utilisez
+```
+3. Installez les nouvelles dépendances (si besoin) :
+```bash
+npm install # ou yarn install
+```
+4. Recompilez l'application :
+```bash
+npm run build # ou yarn build
+```
+5. Redémarrez l'application avec PM2 :
+```bash
+pm2 restart fee-management
+```
+
+## 7. Scripts Utiles
+
+Ces scripts sont définis dans le fichier `package.json` :
+
+- `npm run dev` ou `yarn dev` : Lance l'application en mode développement (ne pas utiliser en production).
+- `npm run build` ou `yarn build` : Compile l'application pour la production.
+- `npm run start` ou `yarn start` : Démarre le serveur de production Next.js.
+- `npm run lint` ou `yarn lint` : Exécute les vérifications de linting (si configuré).
