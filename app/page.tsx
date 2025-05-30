@@ -189,10 +189,6 @@ export default function LoginPage() {
             defaultValue="etudiant"
             className="w-full"
             value={activeTab} // Controlled component: value is driven by state
-            // When the tab changes:
-            // 1. Update the activeTab state.
-            // 2. Clear any existing form-level errors.
-            // 3. Reset the form fields to their default values.
             onValueChange={(value) => {
                setActiveTab(value as 'etudiant' | 'admin'); // Update state
                setFormError(null); // Clear errors
