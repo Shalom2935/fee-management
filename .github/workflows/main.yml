@@ -1,0 +1,67 @@
+name: Simulate School Server Build (NPM)
+
+on:
+  workflow_dispatch: # Permet de déclencher manuellement le workflow
+  push: # Optionnel : déclenche aussi à chaque push sur les branches principales
+    branches:
+      - main # Remplacez par votre branche principale si différente (master, etc.)
+      # - develop # Ajoutez d'autres branches si besoin
+
+jobs:
+  simulate_build:
+    runs-on: ubuntu-latest # Utilise un runner Linux, similaire à votre serveur
+
+    strategy:
+      matrix:
+        # Vous pouvez tester avec différentes versions de Node si besoin
+        # Mettez en premier la version la plus proche de celle que vous suspectez sur le serveur de l'école
+        # ou la version LTS actuelle si vous n'avez aucune idée.
+        node-version: [18.x] # Ex: Node.js 18. Testez aussi avec 16.x si vous pensez que le serveur est plus ancien
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Utilise la dernière version de l'action checkout
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm' # Active le cache pour npm pour accélérer les installations futures (optionnel ici)
+
+      - name: Display Node and NPM versions
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+
+      # Étape 1: Essayer d'installer les dépendances avec npm SANS --force pour voir les erreurs
+      - name: Install dependencies with npm (no force - to see errors)
+        id: npm-install-noforce # Donne un ID à cette étape pour vérifier son résultat
+        run: npm install
+        continue-on-error: true # Important: continue même si cette étape échoue pour qu'on puisse essayer --force
+
+      # Étape 2: Si l'installation SANS --force a échoué, essayer AVEC --force
+      - name: Install dependencies with npm --force (if previous step failed)
+        if: steps.npm-install-noforce.outcome == 'failure' # Ne s'exécute que si l'étape précédente a échoué
+        run: |
+          echo "npm install failed. Retrying with --force..."
+          npm install --force
+
+      # Étape 3: Si l'installation SANS --force a réussi, on est bon pour cette partie
+      # (ou si vous n'avez jamais eu besoin de --force, cette étape est juste pour info)
+      - name: Confirm npm install status
+        if: steps.npm-install-noforce.outcome == 'success'
+        run: echo "npm install (no force) was successful."
+
+      # Si vous utilisez pnpm et que vous voulez être sûr que npm ne s'en inspire pas
+      # même s'il l'ignore, vous pouvez supprimer pnpm-lock.yaml *avant* le build
+      # mais après l'installation npm. Ceci est plus pour simuler un environnement
+      # "purement npm" où pnpm-lock.yaml n'existerait pas du tout.
+      # - name: Remove pnpm-lock.yaml before build (optional simulation)
+      #   run: rm -f pnpm-lock.yaml
+
+      - name: Build Next.js app
+        run: npm run build
+        # Si vous avez besoin de variables d'environnement spécifiques pour le build :
+        # env:
+        #   NODE_ENV: production # Next.js le fait souvent par défaut pour le build
+        #   VOTRE_VARIABLE_ICI: ${{ secrets.VOTRE_SECRET_ICI }} # Si vous avez des secrets
